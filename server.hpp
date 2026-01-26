@@ -26,6 +26,7 @@ class Server
 		std::vector<struct pollfd>	_Fds;
 	public :
 		Server();
+		Server(std::string port);
 		Server(const Server &other);
 		Server& operator=(const Server &other);
 		~Server();
@@ -39,13 +40,14 @@ class Server
 		/// Getters
 		int	GetServerFd() const;
 		int GetPort() const;
+		std::vector<struct pollfd> GetFdsList() const;
 		int		Size();
 		struct pollfd&	operator[](size_t index);
 
 		/// Fonctions
 		int setSocket(Server *server);
 		int	nonBlocking(int fd);
-		void bindFt();
+		int bindFt();
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 

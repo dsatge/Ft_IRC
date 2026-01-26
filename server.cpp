@@ -5,10 +5,16 @@ Server::Server()
 	return ;
 }
 
+Server::Server(std::string port)
+{
+	this->_port = atoi(port.c_str());
+	return ;
+}
+
 Server::Server(const Server &other)
 {
 	this->_serverFd = other._serverFd;
-	this->_port = 6067;
+	this->_port = other._port;
 	int	socketsFdsTabLen = this->_Fds.size() - 1;
 	for (int i = 0; i < socketsFdsTabLen; i++)
 	{
@@ -47,6 +53,12 @@ int Server::GetPort() const
 {
 	return (this->_port);
 }
+
+std::vector<struct pollfd> Server::GetFdsList() const
+{
+	return (this->_Fds);
+}
+
 
 int	Server::Size()
 {
@@ -94,14 +106,19 @@ int	Server::nonBlocking(int fd)
 	return (EXIT_SUCCESS);
 }
 
-void	Server::bindFt()
+int	Server::bindFt()
 {
 	struct sockaddr_in addrIn;
 	memset(&addrIn, 0, sizeof(addrIn));
 	addrIn.sin_family = AF_INET;
-	addrIn.sin_port = this->_port;
+	addrIn.sin_port = htons(this->_port);
 	addrIn.sin_addr.s_addr = INADDR_ANY;
-	bind(this->_serverFd, reinterpret_cast<const sockaddr *>(&addrIn), addrIn.sin_len);
+	if (bind(this->_serverFd, reinterpret_cast<const sockaddr *>(&addrIn), sizeof(addrIn)) != 0)
+	{
+		perror("bind");
+		return (EXIT_FAILURE);
+	}
+	return (EXIT_SUCCESS);
 }
 
 struct pollfd& Server::operator[](size_t index)
