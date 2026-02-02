@@ -54,13 +54,18 @@ int Server::GetPort() const
 	return (this->_port);
 }
 
-std::vector<struct pollfd> Server::GetFdsList() const
+struct pollfd Server::GetFds(int index) const
+{
+	return (this->_Fds[index]);
+}
+
+std::vector<struct pollfd> Server::GetFdsContainer() const
 {
 	return (this->_Fds);
 }
 
 
-int	Server::Size()
+int	Server::SizeList()
 {
 	return (this->_Fds.size());
 }
@@ -119,6 +124,83 @@ int	Server::bindFt()
 		return (EXIT_FAILURE);
 	}
 	return (EXIT_SUCCESS);
+}
+
+int	Server::pollLoop()
+{
+	this->_Fds[0].events = POLLIN;
+	while (1)
+	{
+		int pollStatus = poll(&this->_Fds[0], sizeof(this->_Fds), -1);
+		if (pollStatus < 0)
+			perror("poll");
+		if (pollStatus > 0)
+		{
+			for (size_t index = 0; index <= this->_Fds.size(); index++)
+			{
+				if (this->_Fds[index].revents & POLLIN)
+				{
+					if (index == 0)
+					{
+						std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
+						struct pollfd	newClient;
+						newClient.fd = this->acceptFd(index);
+						if (newClient.fd < 0)
+							break ;
+						newClient.events = POLLIN;
+						newClient.revents = 0;
+						this->AddSocketFds(newClient);
+					}
+					if (index != 0)
+					{
+						char buffer[1024];
+						ssize_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
+						if (msg == 0)
+						{
+							buffer[msg] = '\0';
+							close(this->_Fds[index].fd);
+							std::map<int, Client>::iterator it = this->_Client.find(index);
+							if (it != this->_Client.end())
+								this->_Client.erase(index);
+							std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
+						}
+						if (msg > 0)
+						{
+							Client client(index);
+							this->_Client.insert(std::make_pair(index, client));
+							this->_Client.find(index)->second.SetBuffer(buffer);
+							std::cout << CYAN << this->_Client.find(index)->second.GetBuffer() << RESET << std::endl;
+							memset(buffer, 0, 1024);
+						}
+						if (msg < 0)
+						{
+							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
+						}
+					}
+				}
+				// if (this->_Fds[index].revents & POLLHUP
+				// 		|| this->_Fds[index].revents & POLLERR)
+				// 	perror("revents");
+				// pollStatus--;
+				// if (pollStatus <= 0)
+				// {
+				// 	std::cerr << YELLOW << "je break" << RESET ;
+				// 	break ;
+				// }
+			}
+		}
+	}
+}
+
+int	Server::acceptFd(int index)
+{
+	struct sockaddr addr_client;
+	memset(&addr_client, 0, sizeof(addr_client));
+	socklen_t addr_size = sizeof(addr_client);
+	int	clientFD = accept(this->_Fds[index].fd, &addr_client, &addr_size);
+	if (clientFD < 0)
+		perror("accept");
+	return (clientFD);
 }
 
 struct pollfd& Server::operator[](size_t index)

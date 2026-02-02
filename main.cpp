@@ -4,6 +4,7 @@
 # include <netinet/in.h>
 # include <unistd.h>
 # include "server.hpp"
+# include "client.hpp"
 
 int main(void)
 {
@@ -19,16 +20,7 @@ int main(void)
 			perror("listen");
 			return (1);
 		}
-		while (1)
-		{
-			int pollStatus = poll(server.GetFdsList().data(), server.GetFdsList().size(), -1);
-			if (pollStatus == -1)
-			{
-				perror("poll");
-				return (1);
-			}
-			if (pollStatus )
-		}
+		server.pollLoop();
 	}
 	return (0);
 }
