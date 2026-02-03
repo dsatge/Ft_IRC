@@ -22,6 +22,7 @@ class Client
 {
 	private:
 		int	_fd;
+		bool	_toErase;
 		std::string _IP;
 		char*		_Buffer;
 	public:
@@ -33,8 +34,11 @@ class Client
 		void SetFd(int fd);
 		void SetIP(std::string IP);
 		void SetBuffer(char *buffer);
+		void SetErase();
 
 		std::string GetBuffer() const;
+		bool		GetErase() const;
+		int			GetFd() const;
 };
 
 #endif
