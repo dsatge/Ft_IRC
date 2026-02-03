@@ -60,6 +60,9 @@ class Server
 		int		pollLoop();
 		int		acceptFd(int index);
 		void	disconnectClient(int nbrClient);
+		int		clientJoiningServer(int index);
+		int		clientquittingServer(int index, char* buffer);
+		int		clientSendingMessage(int index, char* buffer);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 

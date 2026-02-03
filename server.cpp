@@ -131,63 +131,32 @@ int	Server::pollLoop()
 	this->_Fds[0].events = POLLIN;
 	while (1)
 	{
-		int pollStatus = poll(&this->_Fds[0], sizeof(this->_Fds), -1);
+		int pollStatus = poll(&this->_Fds[0], this->_Fds.size(), -1);
 		if (pollStatus < 0)
 			perror("poll");
 		if (pollStatus > 0)
 		{
-			for (size_t index = 0; index <= this->_Fds.size(); index++)
+			for (size_t index = 0; index < this->_Fds.size(); index++)
 			{
+				int flagDisconnect = 0;
 				if (this->_Fds[index].revents & POLLIN)
 				{
-					int flagDisconnect = 0;
-					if (index == 0)
-					{
-						std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
-						struct pollfd	newClient;
-						newClient.fd = this->acceptFd(index);
-						if (newClient.fd < 0)
-							break ;
-						newClient.events = POLLIN;
-						newClient.revents = 0;
-						this->AddSocketFds(newClient);
-					}
+					if (index == 0 && clientJoiningServer(index) == EXIT_FAILURE)
+						break ;
 					if (index != 0)
 					{
 						char buffer[1024];
 						ssize_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
 						if (msg == 0)
-						{
-							std::map<int, Client>::iterator it = this->_Client.find(this->_Fds[index].fd);
-							it->second.SetErase();
-							flagDisconnect++;
-						}
+							flagDisconnect += clientquittingServer(index, buffer);
 						if (msg > 0)
-						{
-							Client client(index);
-							this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
-							this->_Client.find(index)->second.SetBuffer(buffer);
-							std::cout << CYAN << this->_Client.find(index)->second.GetBuffer() << RESET;
-							memset(buffer, 0, 1024);
-						}
+							clientSendingMessage(index, buffer);
 						if (msg < 0)
-						{
 							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
-						}
 					}
-					this->disconnectClient(flagDisconnect);
-					flagDisconnect = 0;
 				}
-				// if (this->_Fds[index].revents & POLLHUP
-				// 		|| this->_Fds[index].revents & POLLERR)
-				// 	perror("revents");
-				// pollStatus--;
-				// if (pollStatus <= 0)
-				// {
-				// 	std::cerr << YELLOW << "je break" << RESET ;
-				// 	break ;
-				// }
-				///////// Ici mettre loop qui check status de tous les delete;
+				this->disconnectClient(flagDisconnect);
+				flagDisconnect = 0;
 			}
 		}
 	}
@@ -204,8 +173,52 @@ int	Server::acceptFd(int index)
 	return (clientFD);
 }
 
+int	Server::clientJoiningServer(int index)
+{
+	std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
+	struct pollfd	newClient;
+	newClient.fd = this->acceptFd(index);
+	if (newClient.fd < 0)
+		return (EXIT_FAILURE) ;
+	newClient.events = POLLIN;
+	newClient.revents = 0;
+	this->AddSocketFds(newClient);
+	return (EXIT_SUCCESS);
+}
+
+int	Server::clientquittingServer(int index, char* buffer)
+{
+	*buffer = '\0';
+	std::map<int, Client>::iterator it = this->_Client.find(this->_Fds[index].fd);
+	close(this->_Fds[index].fd);
+	if (it != this->_Client.end())
+	{
+		it->second.SetErase();
+		return (1);
+	}
+	else
+	{
+		// this->_Fds[index].fd = -1;
+		std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
+		return (0);
+	}
+
+}
+
+int	Server::clientSendingMessage(int index, char* buffer)
+{
+	Client client(this->_Fds[index].fd);
+	this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
+	this->_Client.find(index)->second.SetBuffer(buffer);
+	std::cout << CYAN << this->_Client.find(index)->second.GetBuffer() << RESET;
+	memset(buffer, 0, 1024);
+	return (EXIT_SUCCESS);
+}
+
 void Server::disconnectClient(int nbrClient)
 {
+	if (nbrClient == 0)
+		return ;
 	for (size_t i = 0; i < this->_Fds.size(); i++)
 	{
 		if (nbrClient == 0)
@@ -215,7 +228,7 @@ void Server::disconnectClient(int nbrClient)
 		{
 			if (it->second.GetErase() == true)
 			{
-				close(it->first);
+				// close(it->first);
 				this->_Client.erase(it->first);
 				pollfd lastlistfd = this->_Fds.back();
 				this->_Fds.at(i) = lastlistfd;
