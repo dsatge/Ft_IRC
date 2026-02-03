@@ -140,6 +140,7 @@ int	Server::pollLoop()
 			{
 				if (this->_Fds[index].revents & POLLIN)
 				{
+					int flagDisconnect = 0;
 					if (index == 0)
 					{
 						std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
@@ -157,19 +158,16 @@ int	Server::pollLoop()
 						ssize_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
 						if (msg == 0)
 						{
-							buffer[msg] = '\0';
-							close(this->_Fds[index].fd);
-							std::map<int, Client>::iterator it = this->_Client.find(index);
-							if (it != this->_Client.end())
-								this->_Client.erase(index);
-							std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
+							std::map<int, Client>::iterator it = this->_Client.find(this->_Fds[index].fd);
+							it->second.SetErase();
+							flagDisconnect++;
 						}
 						if (msg > 0)
 						{
 							Client client(index);
-							this->_Client.insert(std::make_pair(index, client));
+							this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
 							this->_Client.find(index)->second.SetBuffer(buffer);
-							std::cout << CYAN << this->_Client.find(index)->second.GetBuffer() << RESET << std::endl;
+							std::cout << CYAN << this->_Client.find(index)->second.GetBuffer() << RESET;
 							memset(buffer, 0, 1024);
 						}
 						if (msg < 0)
@@ -177,6 +175,8 @@ int	Server::pollLoop()
 							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
 						}
 					}
+					this->disconnectClient(flagDisconnect);
+					flagDisconnect = 0;
 				}
 				// if (this->_Fds[index].revents & POLLHUP
 				// 		|| this->_Fds[index].revents & POLLERR)
@@ -187,6 +187,7 @@ int	Server::pollLoop()
 				// 	std::cerr << YELLOW << "je break" << RESET ;
 				// 	break ;
 				// }
+				///////// Ici mettre loop qui check status de tous les delete;
 			}
 		}
 	}
@@ -201,6 +202,31 @@ int	Server::acceptFd(int index)
 	if (clientFD < 0)
 		perror("accept");
 	return (clientFD);
+}
+
+void Server::disconnectClient(int nbrClient)
+{
+	for (size_t i = 0; i < this->_Fds.size(); i++)
+	{
+		if (nbrClient == 0)
+			return ;
+		std::map<int, Client>::iterator it = this->_Client.find(this->_Fds[i].fd);
+		if (it != this->_Client.end())
+		{
+			if (it->second.GetErase() == true)
+			{
+				close(it->first);
+				this->_Client.erase(it->first);
+				pollfd lastlistfd = this->_Fds.back();
+				this->_Fds.at(i) = lastlistfd;
+				this->_Fds.pop_back();
+				i--;
+				nbrClient--;
+				std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
+			}
+		}
+	}
+	return ;
 }
 
 struct pollfd& Server::operator[](size_t index)

@@ -2,6 +2,7 @@
 
 Client::Client(int fd) : _fd(fd)
 {
+	this->_toErase = false;
 	return ;
 }
 
@@ -9,6 +10,7 @@ Client::Client(const Client &other)
 {
 	this->_fd = other._fd;
 	this->_IP = other._IP;
+	this->_toErase = other._toErase;
 	return ;
 }
 
@@ -45,15 +47,30 @@ void Client::SetBuffer(char *buffer)
 	return ;
 }
 
+void Client::SetErase()
+{
+	this->_toErase = true;
+	return ;
+}
+
 std::string Client::GetBuffer() const
 {
 	std::stringstream ss;
 	std::string str;
-	std::getline(this->_Buffer);
 	if (!this->_Buffer || this->_Buffer == NULL)
 		return (str);
 	ss << this->_Buffer;
-	ss >> str;
-	std::cerr << "_Buffer = " << this->_Buffer << " str = " << str;
-	return (str);
+	return (ss.str());
+}
+
+bool Client::GetErase() const
+{
+	if (this->_toErase == true)
+		return (true);
+	return (false);
+}
+
+int Client::GetFd() const
+{
+	return (this->_fd);
 }

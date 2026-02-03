@@ -28,7 +28,7 @@ class Server
 {
 	private :
 		int	_serverFd;
-		int _port;
+		int	_port;
 		std::vector<struct pollfd>	_Fds;
 		std::map<int, Client>		_Client;
 	public :
@@ -42,11 +42,11 @@ class Server
 		/// Setters
 		void	SetServerFd(int serverFd);
 		void	AddSocketFds(pollfd fd);
-		const struct sockaddr* setSocketAdress();
+		const struct sockaddr*	setSocketAdress();
 		
 		/// Getters
 		int	GetServerFd() const;
-		int GetPort() const;
+		int	GetPort() const;
 		// std::vector<struct poolfd> GetListFd() const;
 		std::vector<struct pollfd> GetFdsContainer() const;
 		struct pollfd GetFds(int index) const;
@@ -54,11 +54,12 @@ class Server
 		struct pollfd&	operator[](size_t index);
 
 		/// Fonctions
-		int setSocket(Server *server);
-		int	nonBlocking(int fd);
-		int bindFt();
-		int pollLoop();
-		int acceptFd(int index);
+		int		setSocket(Server *server);
+		int		nonBlocking(int fd);
+		int		bindFt();
+		int		pollLoop();
+		int		acceptFd(int index);
+		void	disconnectClient(int nbrClient);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 
