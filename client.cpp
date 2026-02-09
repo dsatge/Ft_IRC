@@ -11,6 +11,7 @@ Client::Client(const Client &other)
 	this->_fd = other._fd;
 	this->_IP = other._IP;
 	this->_toErase = other._toErase;
+	this->_Msg = other._Msg;
 	return ;
 }
 
@@ -20,9 +21,22 @@ Client& Client::operator=(const Client &other)
 	{
 		this->_fd = other._fd;
 		this->_IP = other._IP;
+		this->_Msg = other._Msg;
 	}
 	return (*this);
 }
+
+Client& Client::operator+=(const Client &other)
+{
+	if (this != &other)
+	{
+		this->_fd = other._fd;
+		this->_IP = other._IP;
+		this->_Msg += other._Msg;
+	}
+	return (*this);
+}
+
 
 Client::~Client()
 {
@@ -47,6 +61,18 @@ void Client::SetBuffer(char *buffer)
 	return ;
 }
 
+void Client::SetMsg(char *buffer)
+{
+	this->_Msg += buffer;
+	return ;
+}
+
+void Client::SetEraseMsg(int posInit, int posEnd)
+{
+	this->_Msg.erase(posInit, posEnd);
+}
+
+
 void Client::SetErase()
 {
 	this->_toErase = true;
@@ -61,6 +87,11 @@ std::string Client::GetBuffer() const
 		return (str);
 	ss << this->_Buffer;
 	return (ss.str());
+}
+
+std::string Client::GetMsg() const
+{
+	return (this->_Msg);
 }
 
 bool Client::GetErase() const

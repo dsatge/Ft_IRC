@@ -198,7 +198,6 @@ int	Server::clientquittingServer(int index, char* buffer)
 	}
 	else
 	{
-		// this->_Fds[index].fd = -1;
 		std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
 		return (0);
 	}
@@ -207,10 +206,26 @@ int	Server::clientquittingServer(int index, char* buffer)
 
 int	Server::clientSendingMessage(int index, char* buffer)
 {
-	Client client(this->_Fds[index].fd);
-	this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
-	this->_Client.find(index)->second.SetBuffer(buffer);
-	std::cout << CYAN << this->_Client.find(index)->second.GetBuffer() << RESET;
+	if (this->_Client.find(this->_Fds[index].fd) == this->_Client.end())
+	{
+		Client client(this->_Fds[index].fd);
+		this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
+	}
+	this->_Client.find(this->_Fds[index].fd)->second.SetMsg(buffer);
+	std::string ClientMsg = this->_Client.find(this->_Fds[index].fd)->second.GetMsg();
+	size_t pos = ClientMsg.find("\r\n");
+	if (pos == std::string::npos)
+		pos = ClientMsg.find("\n");
+	while (pos != std::string::npos)
+	{
+		std::string Msg = ClientMsg.substr(0, pos);
+		this->_Client.find(this->_Fds[index].fd)->second.SetEraseMsg(0, pos + 2);
+		ClientMsg.erase(0, pos + 2);
+		std::cout << CYAN << Msg << RESET << std::endl;
+		pos = ClientMsg.find("\r\n");
+		if (pos == std::string::npos)
+			pos = ClientMsg.find("\n");
+	}
 	memset(buffer, 0, 1024);
 	return (EXIT_SUCCESS);
 }
