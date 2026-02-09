@@ -25,18 +25,23 @@ class Client
 		bool	_toErase;
 		std::string _IP;
 		char*		_Buffer;
+		std::string _Msg;
 	public:
 		Client(int fd);
 		Client(const Client &other);
 		Client& operator=(const Client &othe);
+		Client& operator+=(const Client &othe);
 		~Client();
 
 		void SetFd(int fd);
 		void SetIP(std::string IP);
 		void SetBuffer(char *buffer);
+		void SetMsg(char *buffer);
+		void SetEraseMsg(int posInit, int posEnd);
 		void SetErase();
 
 		std::string GetBuffer() const;
+		std::string GetMsg() const;
 		bool		GetErase() const;
 		int			GetFd() const;
 };
