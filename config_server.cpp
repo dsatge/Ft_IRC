@@ -61,8 +61,6 @@ int ConfigServer::check_server(const std::string& port, const std::string& passw
         return (EXIT_FAILURE);
     }
 
-    std::cout << "Print password: " << password << std::endl;
-
     if (password.empty())
     {
         std::cerr << RED << "Error: Password cannot be empty" << RESET << std::endl;

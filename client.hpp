@@ -23,6 +23,7 @@ class Client
 	private:
 		int	_fd;
 		bool	_toErase;
+		bool	_authenticated;
 		std::string _IP;
 		char*		_Buffer;
 		std::string _Msg;
@@ -39,10 +40,12 @@ class Client
 		void SetMsg(char *buffer);
 		void SetEraseMsg(int posInit, int posEnd);
 		void SetErase();
+		void SetAuthenticated(bool value);
 
 		std::string GetBuffer() const;
 		std::string GetMsg() const;
 		bool		GetErase() const;
+		bool		GetAuthenticated() const;
 		int			GetFd() const;
 };
 

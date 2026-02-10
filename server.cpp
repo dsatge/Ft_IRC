@@ -5,9 +5,10 @@ Server::Server()
 	return ;
 }
 
-Server::Server(std::string port)
+Server::Server(std::string port, std::string password)
 {
 	this->_port = atoi(port.c_str());
+	this->_password = password;
 	return ;
 }
 
@@ -15,6 +16,7 @@ Server::Server(const Server &other)
 {
 	this->_serverFd = other._serverFd;
 	this->_port = other._port;
+	this->_password = other._password;
 	int	socketsFdsTabLen = this->_Fds.size() - 1;
 	for (int i = 0; i < socketsFdsTabLen; i++)
 	{
@@ -28,6 +30,7 @@ Server& Server::operator=(const Server &other)
 	if (this != &other)
 	{
 		this->_serverFd = other._serverFd;
+		this->_password = other._password;
 		int	socketsFdsTabLen = other._Fds.size();
 		for (int i = 0; i < (socketsFdsTabLen); i++)
 			this->_Fds.push_back(other._Fds[i]);	}
@@ -52,6 +55,11 @@ int Server::GetServerFd() const
 int Server::GetPort() const
 {
 	return (this->_port);
+}
+
+std::string Server::GetPassword() const
+{
+	return (this->_password);
 }
 
 struct pollfd Server::GetFds(int index) const
@@ -175,7 +183,6 @@ int	Server::acceptFd(int index)
 
 int	Server::clientJoiningServer(int index)
 {
-	std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
 	struct pollfd	newClient;
 	newClient.fd = this->acceptFd(index);
 	if (newClient.fd < 0)
@@ -183,6 +190,10 @@ int	Server::clientJoiningServer(int index)
 	newClient.events = POLLIN;
 	newClient.revents = 0;
 	this->AddSocketFds(newClient);
+	Client client(newClient.fd);
+	this->_Client.insert(std::make_pair(newClient.fd, client));
+	std::string prompt = "Password: ";
+	send(newClient.fd, prompt.c_str(), prompt.size(), 0);
 	return (EXIT_SUCCESS);
 }
 
@@ -221,7 +232,26 @@ int	Server::clientSendingMessage(int index, char* buffer)
 		std::string Msg = ClientMsg.substr(0, pos);
 		this->_Client.find(this->_Fds[index].fd)->second.SetEraseMsg(0, pos + 2);
 		ClientMsg.erase(0, pos + 2);
-		std::cout << CYAN << Msg << RESET << std::endl;
+		Client &client = this->_Client.find(this->_Fds[index].fd)->second;
+		if (client.GetAuthenticated() == false)
+		{
+			if (Msg == this->_password)
+			{
+				client.SetAuthenticated(true);
+				std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
+				std::string ok = "You have joined the server. You can talk now with your friends now.\n";
+				send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+			}
+			else
+			{
+				std::string err = "ERROR: bad password\n";
+				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+				std::string prompt = "Password: ";
+				send(this->_Fds[index].fd, prompt.c_str(), prompt.size(), 0);
+			}
+		}
+		else
+			std::cout << CYAN << Msg << RESET << std::endl;
 		pos = ClientMsg.find("\r\n");
 		if (pos == std::string::npos)
 			pos = ClientMsg.find("\n");

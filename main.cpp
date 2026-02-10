@@ -20,7 +20,7 @@ int main(int ac, char **av)
 	if (configServer.check_server(configServer.GetPort(), configServer.GetPassword()) == EXIT_FAILURE)
 		return (EXIT_FAILURE);
 
-	Server server(configServer.GetPort());
+	Server server(configServer.GetPort(), configServer.GetPassword());
 
 	if (server.setSocket(&server) == EXIT_FAILURE)
 		return (EXIT_FAILURE);
