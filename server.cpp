@@ -146,11 +146,11 @@ int	Server::pollLoop()
 					if (index != 0)
 					{
 						char buffer[1024];
-						ssize_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
+						size_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
 						if (msg == 0)
 							flagDisconnect += clientquittingServer(index, buffer);
 						if (msg > 0)
-							clientSendingMessage(index, buffer);
+							clientSendingMessage(index, buffer, msg);
 						if (msg < 0)
 							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
 					}
@@ -204,14 +204,14 @@ int	Server::clientquittingServer(int index, char* buffer)
 
 }
 
-int	Server::clientSendingMessage(int index, char* buffer)
+int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 {
 	if (this->_Client.find(this->_Fds[index].fd) == this->_Client.end())
 	{
 		Client client(this->_Fds[index].fd);
 		this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
 	}
-	this->_Client.find(this->_Fds[index].fd)->second.SetMsg(buffer);
+	this->_Client.find(this->_Fds[index].fd)->second.SetMsg(buffer, bytesSize);
 	std::string ClientMsg = this->_Client.find(this->_Fds[index].fd)->second.GetMsg();
 	size_t pos = ClientMsg.find("\r\n");
 	if (pos == std::string::npos)

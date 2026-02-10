@@ -36,7 +36,7 @@ class Client
 		void SetFd(int fd);
 		void SetIP(std::string IP);
 		void SetBuffer(char *buffer);
-		void SetMsg(char *buffer);
+		void SetMsg(char *buffer, size_t bytesSize);
 		void SetEraseMsg(int posInit, int posEnd);
 		void SetErase();
 

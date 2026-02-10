@@ -61,9 +61,9 @@ void Client::SetBuffer(char *buffer)
 	return ;
 }
 
-void Client::SetMsg(char *buffer)
+void Client::SetMsg(char *buffer, size_t bytesSize)
 {
-	this->_Msg += buffer;
+	this->_Msg.append(buffer, bytesSize);
 	return ;
 }
 
