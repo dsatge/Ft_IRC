@@ -3,6 +3,7 @@ NAME = ircserv
 CPP_FILES = main.cpp\
 			server.cpp\
 			client.cpp\
+			config_server.cpp\
 
 CFLAGS = -Wall -Werror -Wextra -std=c++98 -g
 # CFLAGS = clang -fsanitize=address -g -Wall -Werror -Wextra -std=c++98 -g

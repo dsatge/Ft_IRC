@@ -3,6 +3,7 @@
 Client::Client(int fd) : _fd(fd)
 {
 	this->_toErase = false;
+	this->_authenticated = false;
 	return ;
 }
 
@@ -11,6 +12,7 @@ Client::Client(const Client &other)
 	this->_fd = other._fd;
 	this->_IP = other._IP;
 	this->_toErase = other._toErase;
+	this->_authenticated = other._authenticated;
 	this->_Msg = other._Msg;
 	return ;
 }
@@ -22,6 +24,7 @@ Client& Client::operator=(const Client &other)
 		this->_fd = other._fd;
 		this->_IP = other._IP;
 		this->_Msg = other._Msg;
+		this->_authenticated = other._authenticated;
 	}
 	return (*this);
 }
@@ -33,6 +36,7 @@ Client& Client::operator+=(const Client &other)
 		this->_fd = other._fd;
 		this->_IP = other._IP;
 		this->_Msg += other._Msg;
+		this->_authenticated = other._authenticated;
 	}
 	return (*this);
 }
@@ -79,6 +83,11 @@ void Client::SetErase()
 	return ;
 }
 
+void Client::SetAuthenticated(bool value)
+{
+	this->_authenticated = value;
+}
+
 std::string Client::GetBuffer() const
 {
 	std::stringstream ss;
@@ -99,6 +108,11 @@ bool Client::GetErase() const
 	if (this->_toErase == true)
 		return (true);
 	return (false);
+}
+
+bool Client::GetAuthenticated() const
+{
+	return (this->_authenticated);
 }
 
 int Client::GetFd() const
