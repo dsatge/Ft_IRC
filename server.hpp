@@ -29,7 +29,7 @@ class Server
 	private :
 		int	_serverFd;
 		int	_port;
-		std::vector<struct pollfd>	_Fds;
+		std::vector <struct pollfd>	_Fds;
 		std::map<int, Client>		_Client;
 	public :
 		Server();
