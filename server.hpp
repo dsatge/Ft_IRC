@@ -64,7 +64,7 @@ class Server
 		void	disconnectClient(int nbrClient);
 		int		clientJoiningServer(int index);
 		int		clientquittingServer(int index, char* buffer);
-		int		clientSendingMessage(int index, char* buffer);
+		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 
