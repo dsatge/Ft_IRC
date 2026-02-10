@@ -24,6 +24,7 @@ class Client
 		int	_fd;
 		bool	_toErase;
 		bool	_authenticated;
+		std::string _nickname;
 		std::string _IP;
 		char*		_Buffer;
 		std::string _Msg;
@@ -41,11 +42,13 @@ class Client
 		void SetEraseMsg(int posInit, int posEnd);
 		void SetErase();
 		void SetAuthenticated(bool value);
+		void SetNickname(const std::string &nickname);
 
 		std::string GetBuffer() const;
 		std::string GetMsg() const;
 		bool		GetErase() const;
 		bool		GetAuthenticated() const;
+		std::string GetNickname() const;
 		int			GetFd() const;
 };
 
