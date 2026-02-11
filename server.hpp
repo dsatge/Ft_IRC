@@ -11,6 +11,7 @@
 # include <fcntl.h>
 # include "client.hpp"
 # include <unistd.h>
+# include "channel.hpp"
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
@@ -30,6 +31,8 @@ class Server
 		int	_serverFd;
 		int	_port;
 		std::string	_password;
+		Channel	_channel;
+		std::map<std::string, Channel> _channels;
 		std::vector <struct pollfd>	_Fds;
 		std::map<int, Client>		_Client;
 	public :

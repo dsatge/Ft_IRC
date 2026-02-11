@@ -5,6 +5,7 @@ Client::Client(int fd) : _fd(fd)
 	this->_toErase = false;
 	this->_authenticated = false;
 	this->_nickname = "";
+	this->_channelName = "";
 	return ;
 }
 
@@ -127,6 +128,16 @@ bool Client::GetAuthenticated() const
 std::string Client::GetNickname() const
 {
 	return (this->_nickname);
+}
+
+void Client::SetChannelName(const std::string &channel)
+{
+	this->_channelName = channel;
+}
+
+std::string Client::GetChannelName() const
+{
+	return (this->_channelName);
 }
 
 int Client::GetFd() const
