@@ -10,6 +10,7 @@ class Client
 		bool	_toErase;
 		bool	_authenticated;
 		std::string _nickname;
+		std::string _channelName;
 		std::string _IP;
 		char*		_Buffer;
 		std::string _Msg;
@@ -28,12 +29,14 @@ class Client
 		void SetErase();
 		void SetAuthenticated(bool value);
 		void SetNickname(const std::string &nickname);
+		void SetChannelName(const std::string &channel);
 
 		std::string GetBuffer() const;
 		std::string GetMsg() const;
 		bool		GetErase() const;
 		bool		GetAuthenticated() const;
 		std::string GetNickname() const;
+		std::string GetChannelName() const;
 		int			GetFd() const;
 };
 
