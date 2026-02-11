@@ -1,18 +1,19 @@
 #include "channel.hpp"
 #include "client.hpp"
 
-Channel::Channel() : _channelName("default") {}
+Channel::Channel() : _channelName("default"), _moderator("") {}
 
-Channel::Channel(const std::string &name) : _channelName(name) {}
+Channel::Channel(const std::string &name) : _channelName(name), _moderator("") {}
 
 Channel::Channel(const Channel &other)
-	: _channelName(other._channelName), _clients(other._clients) {}
+	: _channelName(other._channelName), _moderator(other._moderator), _clients(other._clients) {}
 
 Channel& Channel::operator=(const Channel &other)
 {
 	if (this != &other)
 	{
 		this->_channelName = other._channelName;
+		this->_moderator = other._moderator;
 		this->_clients = other._clients;
 	}
 	return (*this);
@@ -38,6 +39,16 @@ void Channel::RemoveClient(const std::string &nickname)
 std::string Channel::GetChannelName() const
 {
 	return (this->_channelName);
+}
+
+void Channel::SetModerator(const std::string &nickname)
+{
+	this->_moderator = nickname;
+}
+
+std::string Channel::GetModerator() const
+{
+	return (this->_moderator);
 }
 
 Client* Channel::GetClient(const std::string &nickname) const
