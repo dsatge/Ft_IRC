@@ -310,11 +310,27 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
 					{
 						std::string channelName = Msg.substr(spacePos + 1);
+						std::string oldChannel = client.GetChannelName();
+						if (!oldChannel.empty() && this->_channels.find(oldChannel) != this->_channels.end())
+						{
+							this->_channels[oldChannel].RemoveClient(client.GetNickname());
+							if (this->_channels[oldChannel].GetClientCount() == 0)
+							{
+								this->_channels.erase(oldChannel);
+							}
+						}
 						client.SetChannelName(channelName);
 						if (this->_channels.find(channelName) == this->_channels.end())
 						{
 							Channel newChannel(channelName);
 							this->_channels[channelName] = newChannel;
+							this->_channels[channelName].SetModerator(client.GetNickname());
+							std::cerr << MAGENTA << client.GetNickname() << " is now moderator of #" << channelName << RESET << std::endl;
+						}
+						else if (this->_channels[channelName].GetClientCount() == 0)
+						{
+							this->_channels[channelName].SetModerator(client.GetNickname());
+							std::cerr << MAGENTA << client.GetNickname() << " is now moderator of #" << channelName << RESET << std::endl;
 						}
 						this->_channels[channelName].AddClient(client.GetNickname(), &client);
 						std::string joinMsg = "Joined channel " + channelName + "\n";
@@ -365,6 +381,23 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 						send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
 					}
 				}
+				else if (Msg == "CHANNEL" || Msg == "CHANNELS")
+				{
+					std::string response = "\n=== AVAILABLE CHANNELS ===\n";
+					if (this->_channels.empty())
+					{
+						response += "No channels available.\n";
+					}
+					else
+					{
+						for (std::map<std::string, Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
+						{
+							response += "- #" + it->first + " (" + std::to_string(it->second.GetClientCount()) + " users)\n";
+						}
+					}
+					response += "==========================\n";
+					send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+				}
 				else if (Msg.substr(0, 4) == "QUIT")
 				{
 					size_t spacePos = Msg.find(" ");
@@ -376,6 +409,11 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 							if (this->_channels.find(channelToQuit) != this->_channels.end())
 							{
 								this->_channels[channelToQuit].RemoveClient(client.GetNickname());
+								if (this->_channels[channelToQuit].GetClientCount() == 0)
+								{
+									this->_channels.erase(channelToQuit);
+									std::cerr << YELLOW << "Channel " << channelToQuit << " deleted (empty)" << RESET << std::endl;
+								}
 							}
 							client.SetChannelName("");
 							std::string quitMsg = "You left channel " + channelToQuit + "\n";
@@ -396,6 +434,57 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 						client.SetErase();
 						quitFlag = 1;
 						break;
+					}
+				}
+				else if (Msg.substr(0, 4) == "KICK")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string targetNick = Msg.substr(spacePos + 1);
+						std::string channelName = client.GetChannelName();
+						if (channelName.empty())
+						{
+							std::string err = "You must be in a channel to kick someone.\n";
+							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+						}
+						else if (this->_channels.find(channelName) != this->_channels.end())
+						{
+							if (this->_channels[channelName].GetModerator() != client.GetNickname())
+							{
+								std::string err = "Only the moderator can kick users.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else if (!this->_channels[channelName].ClientExists(targetNick))
+							{
+								std::string err = targetNick + " is not in this channel.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else if (targetNick == client.GetNickname())
+							{
+								std::string err = "You cannot kick yourself.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else
+							{
+								Client* targetClient = this->_channels[channelName].GetClient(targetNick);
+								if (targetClient)
+								{
+									std::string kickMsg = "You have been kicked from #" + channelName + " by " + client.GetNickname() + "\n";
+									send(targetClient->GetFd(), kickMsg.c_str(), kickMsg.size(), 0);
+									targetClient->SetChannelName("");
+									this->_channels[channelName].RemoveClient(targetNick);
+									std::string confirmMsg = targetNick + " has been kicked from the channel.\n";
+									send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+									std::cerr << RED << client.GetNickname() << " kicked " << targetNick << " from #" << channelName << RESET << std::endl;
+								}
+							}
+						}
+					}
+					else
+					{
+						std::string err = "Usage: KICK <nickname>\n";
+						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
 				else if (!client.GetChannelName().empty())
