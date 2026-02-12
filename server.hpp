@@ -9,8 +9,9 @@
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <fcntl.h>
-# include "client.hpp"
 # include <unistd.h>
+# include <vector>
+# include "client.hpp"
 # include "channel.hpp"
 
 #define RESET   "\033[0m"
