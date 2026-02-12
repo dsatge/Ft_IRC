@@ -277,7 +277,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 				{
 					client.SetNickname(Msg);
 					std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
-					std::string ok = "Welcome! Use JOIN <channel> or STATUS to list users.\n";
+					std::string ok = "Welcome! Use HELP to see available commands.\n";
 					send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
 				}
 				else
@@ -288,7 +288,26 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			}
 			else
 			{
-				if (Msg.substr(0, 4) == "JOIN")
+				if (Msg == "HELP")
+				{
+					std::string help = "\n";
+					help += "=== AVAILABLE COMMANDS ===\n";
+					help += "JOIN <channel>            - Join or create a channel\n";
+					help += "QUIT                      - Leave current channel\n";
+					help += "QUIT <channel>            - Disconnect from server\n";
+					help += "STATUS                    - Show online users\n";
+					help += "STATUS <channel>          - Show users in a channel\n";
+					help += "CHANNELS                  - List all channels\n";
+					help += "TOPIC                     - View channel topic\n";
+					help += "TOPIC <text>              - Set channel topic (moderator only)\n";
+					help += "KICK <users>              - Remove user from channel (moderator only)\n";
+					help += "INVITE <users> <channel>  - Invite user to channel (moderator only)\n";
+					help += "MESSAGE <users> <message> - Send a private message\n";
+					help += "HELP                      - Show this help message\n";
+					help += "===========================\n";
+					send(this->_Fds[index].fd, help.c_str(), help.size(), 0);
+				}
+				else if (Msg.substr(0, 4) == "JOIN")
 				{
 					size_t spacePos = Msg.find(" ");
 					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
@@ -382,6 +401,102 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					response += "==========================\n";
 					send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
 				}
+				else if (Msg.substr(0, 5) == "TOPIC")
+				{
+					std::string channelName = client.GetChannelName();
+					if (channelName.empty())
+					{
+						std::string err = "You must be in a channel to use TOPIC.\n";
+						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+					}
+					else if (this->_channels.find(channelName) != this->_channels.end())
+					{
+						size_t spacePos = Msg.find(" ");
+						if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+						{
+							if (this->_channels[channelName].GetModerator() != client.GetNickname())
+							{
+								std::string err = "Only the moderator can change the topic.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else
+							{
+								std::string newTopic = Msg.substr(spacePos + 1);
+								if (newTopic.size() >= 50)
+								{
+									std::string err = "Topic must be less than 50 characters.\n";
+									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else
+								{
+									this->_channels[channelName].SetTopic(newTopic);
+									std::string confirmMsg = "Topic changed to: " + newTopic + "\n";
+									send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+									std::cerr << MAGENTA << client.GetNickname() << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
+								}
+							}
+						}
+						else
+						{
+							std::string topic = this->_channels[channelName].GetTopic();
+							if (topic.empty())
+							{
+								std::string response = "Channel #" + channelName + " has no topic set.\n";
+								send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+							}
+							else
+							{
+								std::string response = "Topic for #" + channelName + ": " + topic + "\n";
+								send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+							}
+						}
+					}
+				}
+				else if (Msg.substr(0, 7) == "MESSAGE")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string rest = Msg.substr(spacePos + 1);
+						size_t spacePos2 = rest.find(" ");
+						if (spacePos2 != std::string::npos && spacePos2 + 1 < rest.length())
+						{
+							std::string targetNick = rest.substr(0, spacePos2);
+							std::string message = rest.substr(spacePos2 + 1);
+							Client* targetClient = NULL;
+							for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
+							{
+								if (it->second.GetNickname() == targetNick)
+								{
+									targetClient = &it->second;
+									break;
+								}
+							}
+							if (!targetClient)
+							{
+								std::string err = targetNick + " is not connected to the server.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else
+							{
+								std::string pm = "[PM] " + client.GetNickname() + ": " + message + "\n";
+								send(targetClient->GetFd(), pm.c_str(), pm.size(), 0);
+								std::string confirm = "[PM] to " + targetNick + ": " + message + "\n";
+								send(this->_Fds[index].fd, confirm.c_str(), confirm.size(), 0);
+							}
+						}
+						else
+						{
+							std::string err = "Usage: MESSAGE <nickname> <message>\n";
+							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+						}
+					}
+					else
+					{
+						std::string err = "Usage: MESSAGE <nickname> <message>\n";
+						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+					}
+				}
 				else if (Msg.substr(0, 4) == "QUIT")
 				{
 					size_t spacePos = Msg.find(" ");
@@ -468,6 +583,84 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					else
 					{
 						std::string err = "Usage: KICK <nickname>\n";
+						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+					}
+				}
+				else if (Msg.substr(0, 6) == "INVITE")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string rest = Msg.substr(spacePos + 1);
+						size_t spacePos2 = rest.find(" ");
+						if (spacePos2 != std::string::npos && spacePos2 + 1 < rest.length())
+						{
+							std::string targetNick = rest.substr(0, spacePos2);
+							std::string targetChannel = rest.substr(spacePos2 + 1);
+							std::string senderChannel = client.GetChannelName();
+
+							if (senderChannel.empty())
+							{
+								std::string err = "You must be in a channel to invite someone.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else if (senderChannel != targetChannel)
+							{
+								std::string err = "You can only invite to your current channel.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else if (this->_channels.find(targetChannel) != this->_channels.end())
+							{
+								if (this->_channels[targetChannel].GetModerator() != client.GetNickname())
+								{
+									std::string err = "Only the moderator can invite users.\n";
+									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else if (this->_channels[targetChannel].ClientExists(targetNick))
+								{
+									std::string err = targetNick + " is already in this channel.\n";
+									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else
+								{
+									Client* targetClient = NULL;
+									for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
+									{
+										if (it->second.GetNickname() == targetNick)
+										{
+											targetClient = &it->second;
+											break;
+										}
+									}
+									if (!targetClient)
+									{
+										std::string err = targetNick + " is not connected to the server.\n";
+										send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+									}
+									else
+									{
+										this->_channels[targetChannel].AddClient(targetNick, targetClient);
+										targetClient->SetChannelName(targetChannel);
+
+										std::string inviteMsg = "You have been invited to #" + targetChannel + " by " + client.GetNickname() + "\n";
+										send(targetClient->GetFd(), inviteMsg.c_str(), inviteMsg.size(), 0);
+
+										std::string confirmMsg = targetNick + " has been invited to the channel.\n";
+										send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+										std::cerr << GREEN << client.GetNickname() << " invited " << targetNick << " to #" << targetChannel << RESET << std::endl;
+									}
+								}
+							}
+						}
+						else
+						{
+							std::string err = "Usage: INVITE <nickname> <channel>\n";
+							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+						}
+					}
+					else
+					{
+						std::string err = "Usage: INVITE <nickname> <channel>\n";
 						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
