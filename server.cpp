@@ -97,6 +97,13 @@ void Server::SetUpSignals()
 	sigaction(SIGINT, &sig_act, NULL);
 }
 
+static std::string intToString(int num)
+{
+	std::stringstream ss;
+	ss << num;
+	return ss.str();
+}
+
 int	Server::setSocket(Server *server)
 {
 	struct pollfd serverFd;
@@ -182,7 +189,7 @@ int	Server::pollLoop()
 						if (msg > 0)
 						{
 							buffer[msg] = '\0';
-							int quitFlag = clientSendingMessage(index, buffer);
+							int quitFlag = clientSendingMessage(index, buffer, msg);
 							if (quitFlag == 1)
 								flagDisconnect += 1;
 						}
@@ -392,7 +399,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					{
 						for (std::map<std::string, Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
 						{
-							response += "- #" + it->first + " (" + std::to_string(it->second.GetClientCount()) + " users)\n";
+							response += "- #" + it->first + " (" + intToString(it->second.GetClientCount()) + " users)\n";
 						}
 					}
 					response += "==========================\n";
