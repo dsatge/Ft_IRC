@@ -221,7 +221,7 @@ int	Server::clientquittingServer(int index, char* buffer)
 
 }
 
-int	Server::clientSendingMessage(int index, char* buffer)
+int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 {
 	int quitFlag = 0;
 	if (this->_Client.find(this->_Fds[index].fd) == this->_Client.end())
@@ -229,7 +229,7 @@ int	Server::clientSendingMessage(int index, char* buffer)
 		Client client(this->_Fds[index].fd);
 		this->_Client.insert(std::make_pair(this->_Fds[index].fd, client));
 	}
-	this->_Client.find(this->_Fds[index].fd)->second.SetMsg(buffer);
+	this->_Client.find(this->_Fds[index].fd)->second.SetMsg(buffer, bytesSize);
 	std::string ClientMsg = this->_Client.find(this->_Fds[index].fd)->second.GetMsg();
 	size_t pos = ClientMsg.find("\r\n");
 	if (pos == std::string::npos)
