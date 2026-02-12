@@ -154,11 +154,16 @@ int	Server::pollLoop()
 					if (index != 0)
 					{
 						char buffer[1024];
-						size_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
+						ssize_t msg = recv(this->_Fds[index].fd, buffer, 1023, 0);
 						if (msg == 0)
 							flagDisconnect += clientquittingServer(index, buffer);
 						if (msg > 0)
-							clientSendingMessage(index, buffer, msg);
+						{
+							buffer[msg] = '\0';
+							int quitFlag = clientSendingMessage(index, buffer);
+							if (quitFlag == 1)
+								flagDisconnect += 1;
+						}
 						if (msg < 0)
 							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
 					}
@@ -205,11 +210,12 @@ int	Server::clientquittingServer(int index, char* buffer)
 	if (it != this->_Client.end())
 	{
 		it->second.SetErase();
+		std::cout << YELLOW << "Client " << it->second.GetNickname() << " _toErase = " << it->second.GetErase() << RESET << std::endl;
 		return (1);
 	}
 	else
 	{
-		std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
+		std::cerr << RED << "Unknown client (FD: " << this->_Fds[index].fd << ") Quit Server" << RESET << std::endl;
 		return (0);
 	}
 
@@ -217,6 +223,7 @@ int	Server::clientquittingServer(int index, char* buffer)
 
 int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 {
+	int quitFlag = 0;
 	if (this->_Client.find(this->_Fds[index].fd) == this->_Client.end())
 	{
 		Client client(this->_Fds[index].fd);
@@ -230,6 +237,10 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 	while (pos != std::string::npos)
 	{
 		std::string Msg = ClientMsg.substr(0, pos);
+		if (!Msg.empty() && Msg[Msg.size() - 1] == '\r')
+			Msg.erase(Msg.size() - 1);
+		while (!Msg.empty() && (Msg[0] == '\r' || Msg[0] == '\n' || Msg[0] == '\t'))
+			Msg.erase(0, 1);
 		this->_Client.find(this->_Fds[index].fd)->second.SetEraseMsg(0, pos + 2);
 		ClientMsg.erase(0, pos + 2);
 		Client &client = this->_Client.find(this->_Fds[index].fd)->second;
@@ -238,9 +249,10 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			if (Msg == this->_password)
 			{
 				client.SetAuthenticated(true);
-				std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
-				std::string ok = "You have joined the server. You can talk now with your friends now.\n";
+				std::string ok = "Password accepted.\n";
 				send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+				std::string nickPrompt = "Nickname: ";
+				send(this->_Fds[index].fd, nickPrompt.c_str(), nickPrompt.size(), 0);
 			}
 			else
 			{
@@ -251,13 +263,235 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			}
 		}
 		else
-			std::cout << CYAN << Msg << RESET << std::endl;
+		{
+			if (client.GetNickname().empty())
+			{
+				if (!Msg.empty())
+				{
+					client.SetNickname(Msg);
+					std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
+					std::string ok = "Welcome! Use JOIN <channel> or STATUS to list users.\n";
+					send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+				}
+				else
+				{
+					std::string nickPrompt = "Nickname: ";
+					send(this->_Fds[index].fd, nickPrompt.c_str(), nickPrompt.size(), 0);
+				}
+			}
+			else
+			{
+				if (Msg.substr(0, 4) == "JOIN")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string channelName = Msg.substr(spacePos + 1);
+						std::string oldChannel = client.GetChannelName();
+						if (!oldChannel.empty() && this->_channels.find(oldChannel) != this->_channels.end())
+						{
+							this->_channels[oldChannel].RemoveClient(client.GetNickname());
+							if (this->_channels[oldChannel].GetClientCount() == 0)
+							{
+								this->_channels.erase(oldChannel);
+							}
+						}
+						client.SetChannelName(channelName);
+						if (this->_channels.find(channelName) == this->_channels.end())
+						{
+							Channel newChannel(channelName);
+							this->_channels[channelName] = newChannel;
+							this->_channels[channelName].SetModerator(client.GetNickname());
+							std::cerr << MAGENTA << client.GetNickname() << " is now moderator of #" << channelName << RESET << std::endl;
+						}
+						else if (this->_channels[channelName].GetClientCount() == 0)
+						{
+							this->_channels[channelName].SetModerator(client.GetNickname());
+							std::cerr << MAGENTA << client.GetNickname() << " is now moderator of #" << channelName << RESET << std::endl;
+						}
+						this->_channels[channelName].AddClient(client.GetNickname(), &client);
+						std::string joinMsg = "Joined channel " + channelName + "\n";
+						send(this->_Fds[index].fd, joinMsg.c_str(), joinMsg.size(), 0);
+						std::cerr << GREEN << client.GetNickname() << " joined channel " << channelName << RESET << std::endl;
+					}
+					else
+					{
+						std::string err = "Usage: JOIN <channel_name>\n";
+						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+					}
+				}
+				else if (Msg.substr(0, 6) == "STATUS")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string channelName = Msg.substr(spacePos + 1);
+						if (client.GetChannelName() == channelName)
+						{
+							if (this->_channels.find(channelName) != this->_channels.end())
+							{
+								std::string response = "\n=== USERS IN #" + channelName + " ===\n";
+								const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
+								for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+								{
+									response += "- " + it->first + "\n";
+								}
+								response += "=======================\n";
+								send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+							}
+						}
+						else
+						{
+							std::string err = "You must be in channel " + channelName + " to see its users.\n";
+							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+						}
+					}
+					else
+					{
+						std::string response = "\n=== USERS ON SERVER ===\n";
+						for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
+						{
+							if (!it->second.GetNickname().empty())
+								response += "- " + it->second.GetNickname() + "\n";
+						}
+						response += "=======================\n";
+						send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+					}
+				}
+				else if (Msg == "CHANNEL" || Msg == "CHANNELS")
+				{
+					std::string response = "\n=== AVAILABLE CHANNELS ===\n";
+					if (this->_channels.empty())
+					{
+						response += "No channels available.\n";
+					}
+					else
+					{
+						for (std::map<std::string, Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
+						{
+							response += "- #" + it->first + " (" + std::to_string(it->second.GetClientCount()) + " users)\n";
+						}
+					}
+					response += "==========================\n";
+					send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+				}
+				else if (Msg.substr(0, 4) == "QUIT")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string channelToQuit = Msg.substr(spacePos + 1);
+						if (client.GetChannelName() == channelToQuit)
+						{
+							if (this->_channels.find(channelToQuit) != this->_channels.end())
+							{
+								this->_channels[channelToQuit].RemoveClient(client.GetNickname());
+								if (this->_channels[channelToQuit].GetClientCount() == 0)
+								{
+									this->_channels.erase(channelToQuit);
+									std::cerr << YELLOW << "Channel " << channelToQuit << " deleted (empty)" << RESET << std::endl;
+								}
+							}
+							client.SetChannelName("");
+							std::string quitMsg = "You left channel " + channelToQuit + "\n";
+							send(this->_Fds[index].fd, quitMsg.c_str(), quitMsg.size(), 0);
+							std::cerr << YELLOW << client.GetNickname() << " left channel " << channelToQuit << RESET << std::endl;
+						}
+						else
+						{
+							std::string err = "You are not in channel " + channelToQuit + "\n";
+							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+						}
+					}
+					else
+					{
+						std::string bye = "Goodbye!\n";
+						send(this->_Fds[index].fd, bye.c_str(), bye.size(), 0);
+						close(this->_Fds[index].fd);
+						client.SetErase();
+						quitFlag = 1;
+						break;
+					}
+				}
+				else if (Msg.substr(0, 4) == "KICK")
+				{
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
+					{
+						std::string targetNick = Msg.substr(spacePos + 1);
+						std::string channelName = client.GetChannelName();
+						if (channelName.empty())
+						{
+							std::string err = "You must be in a channel to kick someone.\n";
+							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+						}
+						else if (this->_channels.find(channelName) != this->_channels.end())
+						{
+							if (this->_channels[channelName].GetModerator() != client.GetNickname())
+							{
+								std::string err = "Only the moderator can kick users.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else if (!this->_channels[channelName].ClientExists(targetNick))
+							{
+								std::string err = targetNick + " is not in this channel.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else if (targetNick == client.GetNickname())
+							{
+								std::string err = "You cannot kick yourself.\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+							}
+							else
+							{
+								Client* targetClient = this->_channels[channelName].GetClient(targetNick);
+								if (targetClient)
+								{
+									std::string kickMsg = "You have been kicked from #" + channelName + " by " + client.GetNickname() + "\n";
+									send(targetClient->GetFd(), kickMsg.c_str(), kickMsg.size(), 0);
+									targetClient->SetChannelName("");
+									this->_channels[channelName].RemoveClient(targetNick);
+									std::string confirmMsg = targetNick + " has been kicked from the channel.\n";
+									send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+									std::cerr << RED << client.GetNickname() << " kicked " << targetNick << " from #" << channelName << RESET << std::endl;
+								}
+							}
+						}
+					}
+					else
+					{
+						std::string err = "Usage: KICK <nickname>\n";
+						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+					}
+				}
+				else if (!client.GetChannelName().empty())
+				{
+					std::string channelName = client.GetChannelName();
+					if (this->_channels.find(channelName) != this->_channels.end())
+					{
+						std::string fullMsg = client.GetNickname() + ": " + Msg + "\n";
+						const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
+						for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+						{
+							if (it->second && it->second->GetFd() != this->_Fds[index].fd)
+								send(it->second->GetFd(), fullMsg.c_str(), fullMsg.size(), 0);
+						}
+						std::cout << CYAN << "[" << channelName << "] " << client.GetNickname() << ": " << Msg << RESET << std::endl;
+					}
+				}
+				else
+				{
+					std::string err = "You must JOIN a channel first. Use: JOIN <channel>\n";
+					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+				}
+			}
+		}
 		pos = ClientMsg.find("\r\n");
 		if (pos == std::string::npos)
 			pos = ClientMsg.find("\n");
 	}
 	memset(buffer, 0, 1024);
-	return (EXIT_SUCCESS);
+	return (quitFlag);
 }
 
 void Server::disconnectClient(int nbrClient)
@@ -273,6 +507,7 @@ void Server::disconnectClient(int nbrClient)
 		{
 			if (it->second.GetErase() == true)
 			{
+				std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
 				// close(it->first);
 				this->_Client.erase(it->first);
 				pollfd lastlistfd = this->_Fds.back();
@@ -280,7 +515,6 @@ void Server::disconnectClient(int nbrClient)
 				this->_Fds.pop_back();
 				i--;
 				nbrClient--;
-				std::cout << RED << "CLIENT DISCONECT FROM SERVER" << RESET << std::endl;
 			}
 		}
 	}
