@@ -13,6 +13,11 @@
 # include <vector>
 # include "client.hpp"
 # include "channel.hpp"
+# include <cstdio>
+# include <stdio.h>
+#include <string.h>
+# include <cstdlib>
+# include <csignal>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
@@ -69,6 +74,7 @@ class Server
 		int		clientJoiningServer(int index);
 		int		clientquittingServer(int index, char* buffer);
 		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
+		void	signalHandling();
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 

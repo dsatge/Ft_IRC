@@ -6,6 +6,7 @@
 # include "server.hpp"
 # include "client.hpp"
 # include "config_server.hpp"
+# include <cstdio> 
 
 int main(int ac, char **av)
 {
@@ -26,13 +27,14 @@ int main(int ac, char **av)
 		return (EXIT_FAILURE);
 	if (server.bindFt() != 0)
 		return (EXIT_FAILURE);
+	if (listen(server.GetServerFd(), SOMAXCONN) != 0)
+	{
+		perror("listen");
+		return (EXIT_FAILURE);
+	}
 	while (1)
 	{
-		if (listen(server.GetServerFd(), SOMAXCONN) != 0)
-		{
-			perror("listen");
-			return (EXIT_FAILURE);
-		}
+		// signalHandling();
 		server.pollLoop();
 	}
 	return (EXIT_SUCCESS);
