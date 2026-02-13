@@ -142,5 +142,5 @@ std::string Client::GetChannelName() const
 
 int Client::GetFd() const
 {
-	return (this->_fd);
+	return (this->_fd);	
 }

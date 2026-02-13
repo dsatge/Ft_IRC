@@ -119,7 +119,9 @@ int	Server::setSocket(Server *server)
 	int opt_onOff = 1;
 	setsockopt(this->_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt_onOff, sizeof(opt_onOff));
 	/// set in nonblocking mode
-	fcntl(this->_serverFd, F_SETFL, O_NONBLOCK);
+	if (this->nonBlocking(serverFd.fd) == EXIT_FAILURE)
+		return (EXIT_FAILURE);
+	// fcntl(this->_serverFd, F_SETFL, O_NONBLOCK);
 	return (EXIT_SUCCESS);
 }
 
@@ -240,7 +242,7 @@ int	Server::clientquittingServer(int index, char* buffer)
 	if (it != this->_Client.end())
 	{
 		it->second.SetErase();
-		std::cout << YELLOW << "Client " << it->second.GetNickname() << " _toErase = " << it->second.GetErase() << RESET << std::endl;
+		// std::cout << YELLOW << "Client " << it->second.GetNickname() << " _toErase = " << it->second.GetErase() << RESET << std::endl;
 		return (1);
 	}
 	else
@@ -550,6 +552,11 @@ void Server::disconnectClient(int nbrClient)
 	}
 	return ;
 }
+
+// void	Server::signalHandling()
+// {
+// 	signal(SIGINT, SIGQUIT);
+// }
 
 struct pollfd& Server::operator[](size_t index)
 {
