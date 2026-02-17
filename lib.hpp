@@ -20,6 +20,7 @@
 # include <sys/types.h>
 # include <string.h>
 # include <stdio.h>
+# include <cerrno>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
