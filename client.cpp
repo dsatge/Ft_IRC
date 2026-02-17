@@ -4,6 +4,7 @@ Client::Client(int fd) : _fd(fd)
 {
 	this->_toErase = false;
 	this->_authenticated = false;
+	this->_nickname = "";
 	return ;
 }
 
@@ -13,6 +14,7 @@ Client::Client(const Client &other)
 	this->_IP = other._IP;
 	this->_toErase = other._toErase;
 	this->_authenticated = other._authenticated;
+	this->_nickname = other._nickname;
 	this->_Msg = other._Msg;
 	return ;
 }
@@ -25,6 +27,7 @@ Client& Client::operator=(const Client &other)
 		this->_IP = other._IP;
 		this->_Msg = other._Msg;
 		this->_authenticated = other._authenticated;
+		this->_nickname = other._nickname;
 	}
 	return (*this);
 }
@@ -37,6 +40,7 @@ Client& Client::operator+=(const Client &other)
 		this->_IP = other._IP;
 		this->_Msg += other._Msg;
 		this->_authenticated = other._authenticated;
+		this->_nickname = other._nickname;
 	}
 	return (*this);
 }
@@ -88,6 +92,11 @@ void Client::SetAuthenticated(bool value)
 	this->_authenticated = value;
 }
 
+void Client::SetNickname(const std::string &nickname)
+{
+	this->_nickname = nickname;
+}
+
 std::string Client::GetBuffer() const
 {
 	std::stringstream ss;
@@ -113,6 +122,11 @@ bool Client::GetErase() const
 bool Client::GetAuthenticated() const
 {
 	return (this->_authenticated);
+}
+
+std::string Client::GetNickname() const
+{
+	return (this->_nickname);
 }
 
 int Client::GetFd() const

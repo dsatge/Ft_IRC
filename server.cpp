@@ -176,11 +176,14 @@ int	Server::pollLoop()
 					if (index != 0)
 					{
 						char buffer[1024];
-						size_t msg = recv(this->_Fds[index].fd, buffer, 1024, 0);
+						ssize_t msg = recv(this->_Fds[index].fd, buffer, 1023, 0);
 						if (msg == 0)
 							flagDisconnect += clientquittingServer(index, buffer);
 						if (msg > 0)
-							clientSendingMessage(index, buffer, msg);
+						{
+							buffer[msg] = '\0';
+							clientSendingMessage(index, buffer);
+						}
 						if (msg < 0)
 							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
 					}
@@ -253,6 +256,10 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 	while (pos != std::string::npos)
 	{
 		std::string Msg = ClientMsg.substr(0, pos);
+		if (!Msg.empty() && Msg[Msg.size() - 1] == '\r')
+			Msg.erase(Msg.size() - 1);
+		while (!Msg.empty() && (Msg[0] == '\r' || Msg[0] == '\n' || Msg[0] == '\t'))
+			Msg.erase(0, 1);
 		this->_Client.find(this->_Fds[index].fd)->second.SetEraseMsg(0, pos + 2);
 		ClientMsg.erase(0, pos + 2);
 		Client &client = this->_Client.find(this->_Fds[index].fd)->second;
@@ -261,9 +268,10 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			if (Msg == this->_password)
 			{
 				client.SetAuthenticated(true);
-				std::cerr << GREEN << "CLIENT JOINED SERVER" << RESET << std::endl;
-				std::string ok = "You have joined the server. You can talk now with your friends now.\n";
+				std::string ok = "Password accepted.\n";
 				send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+				std::string nickPrompt = "Nickname: ";
+				send(this->_Fds[index].fd, nickPrompt.c_str(), nickPrompt.size(), 0);
 			}
 			else
 			{
@@ -274,7 +282,25 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			}
 		}
 		else
-			std::cout << CYAN << Msg << RESET << std::endl;
+		{
+			if (client.GetNickname().empty())
+			{
+				if (Msg.empty())
+				{
+					std::string nickPrompt = "Nickname: ";
+					send(this->_Fds[index].fd, nickPrompt.c_str(), nickPrompt.size(), 0);
+				}
+				else
+				{
+					client.SetNickname(Msg);
+					std::string ok = "You have joined the server. You can talk now with your friends now.\n";
+					send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+					std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
+				}
+			}
+			else
+				std::cout << CYAN << Msg << RESET << std::endl;
+		}
 		pos = ClientMsg.find("\r\n");
 		if (pos == std::string::npos)
 			pos = ClientMsg.find("\n");
