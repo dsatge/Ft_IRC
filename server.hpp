@@ -50,7 +50,7 @@ class Server
 		int		clientJoiningServer(int index);
 		int		clientquittingServer(int index, char* buffer);
 		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
-		void	signalHandling();
+		void	closeFds();
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 

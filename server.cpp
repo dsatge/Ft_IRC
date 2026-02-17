@@ -162,6 +162,17 @@ void	handleSignal(int sig)
 	sig_serverStop = 1;
 }
 
+void	Server::closeFds()
+{
+	std::vector<struct pollfd>::iterator it = this->_Fds.begin();
+	if (it == this->_Fds.end())
+		return ;
+	for (;it != this->_Fds.end(); it++)
+	{
+		close(it->fd);
+	}
+}
+
 int	Server::pollLoop()
 {
 	this->_Fds[0].events = POLLIN;
@@ -202,6 +213,7 @@ int	Server::pollLoop()
 			}
 		}
 	}
+	closeFds();
 	return (EXIT_SUCCESS);
 }
 
