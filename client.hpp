@@ -25,6 +25,8 @@ class Client
 		bool	_toErase;
 		bool	_authenticated;
 		std::string _nickname;
+		std::string _username;
+		std::string _realname;
 		std::string _channelName;
 		std::string _IP;
 		char*		_Buffer;
@@ -44,6 +46,8 @@ class Client
 		void SetErase();
 		void SetAuthenticated(bool value);
 		void SetNickname(const std::string &nickname);
+		void SetUsername(const std::string &username);
+		void SetRealname(const std::string &realname);
 		void SetChannelName(const std::string &channel);
 
 		std::string GetBuffer() const;
@@ -51,6 +55,8 @@ class Client
 		bool		GetErase() const;
 		bool		GetAuthenticated() const;
 		std::string GetNickname() const;
+		std::string GetUsername() const;
+		std::string GetRealname() const;
 		std::string GetChannelName() const;
 		int			GetFd() const;
 };
