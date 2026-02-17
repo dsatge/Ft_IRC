@@ -2,6 +2,7 @@
 	# define SERVER_HPP
 
 # include "lib.hpp"
+# include "channel.hpp"
 
 class Client;
 

@@ -14,9 +14,12 @@
 # include <set>
 # include <sstream>
 # include <map>
+# include <vector>
 # include <unistd.h>
 # include <signal.h>
 # include <sys/types.h>
+# include <string.h>
+# include <stdio.h>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"

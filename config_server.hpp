@@ -1,5 +1,7 @@
 #pragma once
 
+# include "lib.hpp"
+
 class ConfigServer
 {
     private :
