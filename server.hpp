@@ -1,33 +1,8 @@
 # ifndef SERVER_HPP
 	# define SERVER_HPP
 
-# include <iostream>
-# include <set>
-# include <sstream>
-# include <poll.h>
-# include <map>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <fcntl.h>
-# include <unistd.h>
-# include <vector>
-# include "client.hpp"
+# include "lib.hpp"
 # include "channel.hpp"
-# include <cstdio>
-# include <stdio.h>
-#include <string.h>
-# include <cstdlib>
-# include <csignal>
-
-#define RESET   "\033[0m"
-#define RED     "\033[31m"
-#define GREEN   "\033[32m"
-#define YELLOW  "\033[33m"
-#define BLUE    "\033[34m"
-#define MAGENTA "\033[35m"
-#define CYAN    "\033[36m"
-#define WHITE   "\033[37m"
-#define BOLD    "\033[1m"
 
 class Client;
 
@@ -53,6 +28,7 @@ class Server
 		void	SetServerFd(int serverFd);
 		void	AddSocketFds(pollfd fd);
 		const struct sockaddr*	setSocketAdress();
+		void	SetUpSignals();
 		
 		/// Getters
 		int	GetServerFd() const;
@@ -74,7 +50,7 @@ class Server
 		int		clientJoiningServer(int index);
 		int		clientquittingServer(int index, char* buffer);
 		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
-		void	signalHandling();
+		void	closeFds();
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 

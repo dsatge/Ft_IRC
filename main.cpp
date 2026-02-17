@@ -1,12 +1,7 @@
-# include <iostream>
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <unistd.h>
 # include "server.hpp"
 # include "client.hpp"
 # include "config_server.hpp"
-# include <cstdio> 
+# include "lib.hpp"
 
 int main(int ac, char **av)
 {
@@ -32,10 +27,7 @@ int main(int ac, char **av)
 		perror("listen");
 		return (EXIT_FAILURE);
 	}
-	while (1)
-	{
-		// signalHandling();
-		server.pollLoop();
-	}
+	server.pollLoop();
+	std::cerr << GREEN << "EXITING" << RESET << std::endl;
 	return (EXIT_SUCCESS);
 }
