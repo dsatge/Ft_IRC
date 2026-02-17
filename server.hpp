@@ -1,26 +1,7 @@
 # ifndef SERVER_HPP
 	# define SERVER_HPP
 
-# include <iostream>
-# include <set>
-# include <sstream>
-# include <poll.h>
-# include <map>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <fcntl.h>
-# include "client.hpp"
-# include <unistd.h>
-
-#define RESET   "\033[0m"
-#define RED     "\033[31m"
-#define GREEN   "\033[32m"
-#define YELLOW  "\033[33m"
-#define BLUE    "\033[34m"
-#define MAGENTA "\033[35m"
-#define CYAN    "\033[36m"
-#define WHITE   "\033[37m"
-#define BOLD    "\033[1m"
+# include "lib.hpp"
 
 class Client;
 
@@ -44,6 +25,7 @@ class Server
 		void	SetServerFd(int serverFd);
 		void	AddSocketFds(pollfd fd);
 		const struct sockaddr*	setSocketAdress();
+		void	SetUpSignals();
 		
 		/// Getters
 		int	GetServerFd() const;

@@ -1,4 +1,7 @@
+#define _XOPEN_SOURCE 700
+
 # include "server.hpp"
+# include "client.hpp"
 
 Server::Server()
 {
@@ -84,6 +87,16 @@ void Server::AddSocketFds(pollfd fd)
 	return ;
 }
 
+void	handleSignal(int sig);
+
+void Server::SetUpSignals()
+{
+	struct sigaction sig_act;
+	memset(&sig_act, 0, sizeof(sig_act));
+	sig_act.sa_handler = handleSignal;
+	sigaction(SIGINT, &sig_act, NULL);
+}
+
 int	Server::setSocket(Server *server)
 {
 	struct pollfd serverFd;
@@ -134,10 +147,19 @@ int	Server::bindFt()
 	return (EXIT_SUCCESS);
 }
 
+static volatile sig_atomic_t sig_serverStop = 0;
+
+void	handleSignal(int sig)
+{
+	(void) sig;
+	sig_serverStop = 1;
+}
+
 int	Server::pollLoop()
 {
 	this->_Fds[0].events = POLLIN;
-	while (1)
+	SetUpSignals();
+	while (sig_serverStop == 0)
 	{
 		int pollStatus = poll(&this->_Fds[0], this->_Fds.size(), -1);
 		if (pollStatus < 0)
@@ -168,6 +190,7 @@ int	Server::pollLoop()
 			}
 		}
 	}
+	return (EXIT_SUCCESS);
 }
 
 int	Server::acceptFd(int index)
