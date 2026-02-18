@@ -5,9 +5,9 @@ Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
 
 ~ Content ~
 
- 1/ Descrpition
- 2/ Instructions
-  a/ Compilation
+ 1. Descrpition
+ 2. Instructions
+	  a/ Compilation
   b/ Launch server
   c/ Connect client
   d/ Features
