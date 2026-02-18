@@ -1,16 +1,16 @@
 # ft_irc : Internet Relay Chat
 
-This project has been created as part of the 42 curriculum by :
+This project has been created as part of the 42 curriculum by :  
  Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
 
-~ Content ~
+# ~ Content ~
 
  1. Descrpition
  2. Instructions
-   * a. Compilation
-   * b. Launch server
-   * c. Connect client
-   * d. Features
+   * * a/ Compilation
+   * * b/ Launch server
+   * * c/ Connect client
+   * * d/ Features
  3. Resources
 
 
