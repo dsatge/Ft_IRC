@@ -1,4 +1,4 @@
-#ft_irc : Internet Relay Chat
+# ft_irc : Internet Relay Chat
 
 This project has been created as part of the 42 curriculum by :
 Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
@@ -7,33 +7,33 @@ Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
 
  1. Descrpition
  2. Instructions
-a. Compilation
-b. Launch server
-c. Connect client
-d. Features
+ * * a. Compilation
+   * b. Launch server
+   * c. Connect client
+   * d. Features * *
  3. Resources
 
 
-##1/ Description
+## 1/ Description
 
 This project is about creating an Internet Relay Chat (IRC) server. It needs to create a real time messaging that can be either public or private. User need to be able to exchange private messages and join discussion group. The server needs to keep running with multiple client and even when client disconnect unexpectedly. Everything needs to follow the RFC 2812 protocol.
 This projet needs to be able to be complie as c++98 standard.
 
-##2/ Instructions
+## 2/ Instructions
 
-###a/ Compilation
+### a/ Compilation
 This project contain a Makefile. To compile use the command:
  ```bash
  make
  ```
 
-###b/ Launch server
+### b/ Launch server
 The server takes two argument, ./ircserv <port> <password> for exemple:
 ```bash
 ./ircserv 6067 secretCode
 ```
 
-###c/ Connect client
+### c/ Connect client
 The is two different way to connect a client, with nc or irssi.
 nc protocole :
 ```bash
@@ -68,7 +68,7 @@ USER bob 0 * :Robert Jr Smith
 The client is now set in the server and ready to use other features.
 
 
-###d/ Features
+### d/ Features
 
 Here are all the command available in the server:
 
@@ -93,7 +93,7 @@ LIST                      - List all channels
 MESSAGE <users> <message> - Send a private message
 
 
-##3/ Resources
+## 3/ Resources
 
  section listing classic references related to the topic (documen-
 tation, articles, tutorials, etc.), as well as a description of how AI was used —
