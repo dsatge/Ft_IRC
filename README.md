@@ -5,13 +5,13 @@ This project has been created as part of the 42 curriculum by :
 
 ### ~ Content ~
 
- 1. Descrpition
- 2. Instructions
+ 1/ Descrpition
+ 2/ Instructions
    * * a/ Compilation
    * * b/ Launch server
    * * c/ Connect client
    * * d/ Features
- 3. Resources
+ 3/ Resources
 
   
 ## 1/ Description
@@ -72,7 +72,7 @@ The client is now set in the server and ready to use other features.
 
 Here are all the command available in the server:
 
-QUIT                      - Disconnect from server  
+QUIT(                      )- Disconnect from server  
 KICK <users>              - Remove user from channel (moderator only)  
 INVITE <users> <channel>  - Invite user to channel (moderator only)  
 TOPIC <text>              - Set channel topic (moderator only)  
