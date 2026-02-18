@@ -5,13 +5,13 @@ Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
 
 ~ Content ~
 
-	1/ Descrpition
-	2/ Instructions
-		a/ Compilation
-		b/ Launch server
-		c/ Connect client
-		d/ Features
-	3/ Resources
+1/ Descrpition
+2/ Instructions
+	a/ Compilation
+	b/ Launch server
+	c/ Connect client
+	d/ Features
+3/ Resources
 
 
 1/ Description
@@ -21,19 +21,19 @@ This projet needs to be able to be complie as c++98 standard.
 
 2/ Instructions
 
-	a/ Compilation
+a/ Compilation
 This project contain a Makefile. To compile use the command:
  ```bash
  make
  ```
 
-	b/ Launch server
+b/ Launch server
 The server takes two argument, ./ircserv <port> <password> for exemple:
 ```bash
 ./ircserv 6067 secretCode
 ```
 
-	c/ Connect client
+c/ Connect client
 The is two different way to connect a client, with nc or irssi.
 nc protocole :
 ```bash
@@ -68,7 +68,7 @@ USER bob 0 * :Robert Jr Smith
 The client is now set in the server and ready to use other features.
 
 
-	d/ Features
+d/ Features
 
 Here are all the command available in the server:
 
