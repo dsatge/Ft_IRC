@@ -7,10 +7,10 @@ Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
 
  1. Descrpition
  2. Instructions
- * * a. Compilation
+   * a. Compilation
    * b. Launch server
    * c. Connect client
-   * d. Features * *
+   * d. Features
  3. Resources
 
 
