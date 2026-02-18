@@ -1,7 +1,7 @@
 # ft_irc : Internet Relay Chat
 
 This project has been created as part of the 42 curriculum by :
-Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
+ Akhmed Dovletov (akdovlet), Deborah Satge (dsatge), Enzo Schneider (Enschnei).
 
 ~ Content ~
 
