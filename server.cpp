@@ -207,7 +207,7 @@ int	Server::pollLoop()
 								flagDisconnect += 1;
 						}
 						if (msg < 0)
-							std::cout << YELLOW << "~ ELSE ~" << RESET << std::endl;
+							perror("recv");
 					}
 				}
 				this->disconnectClient(flagDisconnect);
