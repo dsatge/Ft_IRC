@@ -1,12 +1,12 @@
 #include "channel.hpp"
 #include "client.hpp"
 
-Channel::Channel() : _channelName("default"), _moderator("") {}
+Channel::Channel() : _channelName("default"), _moderator(""), _topic(""), _inviteOnly(false) {}
 
-Channel::Channel(const std::string &name) : _channelName(name), _moderator("") {}
+Channel::Channel(const std::string &name) : _channelName(name), _moderator(""), _topic(""), _inviteOnly(false) {}
 
 Channel::Channel(const Channel &other)
-	: _channelName(other._channelName), _moderator(other._moderator), _clients(other._clients) {}
+	: _channelName(other._channelName), _moderator(other._moderator), _topic(other._topic), _inviteOnly(other._inviteOnly), _clients(other._clients) {}
 
 Channel& Channel::operator=(const Channel &other)
 {
@@ -14,6 +14,8 @@ Channel& Channel::operator=(const Channel &other)
 	{
 		this->_channelName = other._channelName;
 		this->_moderator = other._moderator;
+		this->_topic = other._topic;
+		this->_inviteOnly = other._inviteOnly;
 		this->_clients = other._clients;
 	}
 	return (*this);
@@ -49,6 +51,26 @@ void Channel::SetModerator(const std::string &nickname)
 std::string Channel::GetModerator() const
 {
 	return (this->_moderator);
+}
+
+void Channel::SetTopic(const std::string &topic)
+{
+	this->_topic = topic;
+}
+
+void Channel::SetInviteOnly(bool inviteOnly)
+{
+	this->_inviteOnly = inviteOnly;
+}
+
+std::string Channel::GetTopic() const
+{
+	return (this->_topic);
+}
+
+bool Channel::IsInviteOnly() const
+{
+	return (this->_inviteOnly);
 }
 
 Client* Channel::GetClient(const std::string &nickname) const
