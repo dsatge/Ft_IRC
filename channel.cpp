@@ -1,12 +1,12 @@
 #include "channel.hpp"
 #include "client.hpp"
 
-Channel::Channel() : _channelName("default"), _moderator(""), _topic(""), _inviteOnly(false) {}
+Channel::Channel() : _channelName("default"), _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
 
-Channel::Channel(const std::string &name) : _channelName(name), _moderator(""), _topic(""), _inviteOnly(false) {}
+Channel::Channel(const std::string &name) : _channelName(name), _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
 
 Channel::Channel(const Channel &other)
-	: _channelName(other._channelName), _moderator(other._moderator), _topic(other._topic), _inviteOnly(other._inviteOnly), _clients(other._clients) {}
+	: _channelName(other._channelName), _moderator(other._moderator), _topic(other._topic), _inviteOnly(other._inviteOnly), _topicRestricted(other._topicRestricted), _key(other._key), _userLimit(other._userLimit), _clients(other._clients) {}
 
 Channel& Channel::operator=(const Channel &other)
 {
@@ -16,6 +16,9 @@ Channel& Channel::operator=(const Channel &other)
 		this->_moderator = other._moderator;
 		this->_topic = other._topic;
 		this->_inviteOnly = other._inviteOnly;
+		this->_topicRestricted = other._topicRestricted;
+		this->_key = other._key;
+		this->_userLimit = other._userLimit;
 		this->_clients = other._clients;
 	}
 	return (*this);
@@ -63,6 +66,31 @@ void Channel::SetInviteOnly(bool inviteOnly)
 	this->_inviteOnly = inviteOnly;
 }
 
+void Channel::SetTopicRestricted(bool topicRestricted)
+{
+	this->_topicRestricted = topicRestricted;
+}
+
+void Channel::SetKey(const std::string &key)
+{
+	this->_key = key;
+}
+
+void Channel::ClearKey()
+{
+	this->_key.clear();
+}
+
+void Channel::SetUserLimit(int limit)
+{
+	this->_userLimit = limit;
+}
+
+void Channel::ClearUserLimit()
+{
+	this->_userLimit = 0;
+}
+
 std::string Channel::GetTopic() const
 {
 	return (this->_topic);
@@ -71,6 +99,21 @@ std::string Channel::GetTopic() const
 bool Channel::IsInviteOnly() const
 {
 	return (this->_inviteOnly);
+}
+
+bool Channel::IsTopicRestricted() const
+{
+	return (this->_topicRestricted);
+}
+
+std::string Channel::GetKey() const
+{
+	return (this->_key);
+}
+
+int Channel::GetUserLimit() const
+{
+	return (this->_userLimit);
 }
 
 Client* Channel::GetClient(const std::string &nickname) const
