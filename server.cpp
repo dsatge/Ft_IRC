@@ -207,7 +207,10 @@ int	Server::pollLoop()
 								flagDisconnect += 1;
 						}
 						if (msg < 0)
-							perror("recv");
+						{
+							// Client disconnected abruptly (e.g., Ctrl+C)
+							flagDisconnect += clientquittingServer(index, buffer);
+						}
 					}
 				}
 				this->disconnectClient(flagDisconnect);
@@ -251,6 +254,18 @@ int	Server::clientquittingServer(int index, char* buffer)
 	close(this->_Fds[index].fd);
 	if (it != this->_Client.end())
 	{
+		// Remove client from their channel if they're in one
+		std::string channelName = it->second.GetChannelName();
+		if (!channelName.empty() && this->_channels.find(channelName) != this->_channels.end())
+		{
+			this->_channels[channelName].RemoveClient(it->second.GetNickname());
+			if (this->_channels[channelName].GetClientCount() == 0)
+			{
+				this->_channels.erase(channelName);
+				std::cerr << YELLOW << "Channel " << channelName << " deleted (empty)" << RESET << std::endl;
+			}
+		}
+		
 		it->second.SetErase();
 		// std::cout << YELLOW << "Client " << it->second.GetNickname() << " _toErase = " << it->second.GetErase() << RESET << std::endl;
 		return (1);
@@ -302,19 +317,22 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					}
 					else
 					{
-						std::string err = "ERROR: bad password\n";
+						std::string serverName = "ircserv";
+						std::string err = ":" + serverName + " 464 * PASS :Password incorrect\r\n";
 						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
 				else
 				{
-					std::string err = "ERROR: invalid authentication command\n";
+					std::string serverName = "ircserv";
+					std::string err = ":" + serverName + " 461 * PASS :Not enough parameters\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				}
 			}
 			else
 			{
-				std::string err = "ERROR: not authenticated\n";
+				std::string serverName = "ircserv";
+				std::string err = ":" + serverName + " 451 * :You have not registered\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 			}
 		}
@@ -375,17 +393,26 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 							{
 								std::string mode = rest.substr(0, thirdSpace);
 								rest = rest.substr(thirdSpace + 1);
+								// Now rest should be "<unused> :<realname>"
+								// Find the colon that marks the realname start
 								size_t colonPos = rest.find(":");
-								if (colonPos != std::string::npos && colonPos + 1 < rest.length())
-								{
-									std::string realname = rest.substr(colonPos + 1);
-									client.SetUsername(username);
-									client.SetRealname(realname);
-								}
-								else
+								// The colon should be at the start or after the unused parameter
+								if (colonPos == std::string::npos)
 								{
 									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
 									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else if (colonPos + 1 >= rest.length())
+								{
+									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
+									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else
+								{
+									// Extract realname after the colon
+									std::string realname = rest.substr(colonPos + 1);
+									client.SetUsername(username);
+									client.SetRealname(realname);
 								}
 							}
 							else
@@ -465,6 +492,13 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 							channelName.erase(0, 1);
 						if (this->_channels.find(channelName) != this->_channels.end())
 						{
+							if (this->_channels[channelName].ClientExists(client.GetNickname()))
+							{
+								std::string serverName = "ircserv";
+								std::string err = ":" + serverName + " 443 " + client.GetNickname() + " " + client.GetNickname() + " #" + channelName + " :User is already on channel\r\n";
+								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								continue;
+							}
 							if (this->_channels[channelName].GetUserLimit() > 0
 								&& this->_channels[channelName].GetClientCount() >= this->_channels[channelName].GetUserLimit())
 							{
