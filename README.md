@@ -91,7 +91,7 @@ Here are all the commands available in the server:
 |	 `+l` *\<limit\>* or `-l`|Set/remove the user limit to channel |
 |**MESSAGING options :**&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;| |
 |`PRIVMSG` \<target\> :\<message\> |Send a private message to another user with his nickname |
-|`PRIVMSG` \<channel\> :\<message\> |Send a message to a channel |
+| \<message\> |When in a group, send a message to the group |
 |**GENERAL options :**&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;| |
 |`HELP` | Show features options *(not RFC 2812 protocol)* |
   

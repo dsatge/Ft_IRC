@@ -2,6 +2,7 @@ NAME = ircserv
 
 CPP_FILES = main.cpp\
 			server.cpp\
+			serverFeatures.cpp\
 			client.cpp\
 			config_server.cpp\
 			channel.cpp\

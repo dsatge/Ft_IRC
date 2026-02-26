@@ -44,6 +44,7 @@ class Server
 		int		setSocket(Server *server);
 		int		nonBlocking(int fd);
 		int		bindFt();
+		std::string intToString(int num);
 		int		pollLoop();
 		int		acceptFd(int index);
 		void	disconnectClient(int nbrClient);
@@ -51,6 +52,21 @@ class Server
 		int		clientquittingServer(int index, char* buffer);
 		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
 		void	closeFds();
+
+		/// Commands Features
+		// Server*	cmdHandler(std::string msg);
+		void	cmdHelp(std::string Msg, int index, Client client);
+		void	cmdJoin(std::string Msg, int index, Client client);
+		void	cmdNames(std::string Msg, int index, Client client);
+		void	cmdList(std::string Msg, int index, Client client);
+		void	cmdMode(std::string Msg, int index, Client client);
+		void	cmdTopic(std::string Msg, int index, Client client);
+		void	cmdPrivmsg(std::string Msg, int index, Client client);
+		void	cmdPart(std::string Msg, int index, Client client);
+		int		cmdQuit(std::string Msg, int index, Client client);
+		void	cmdKick(std::string Msg, int index, Client client);
+		void	cmdInvite(std::string Msg, int index, Client client);
+		void	msgChannel(std::string Msg, int index, Client client);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 
