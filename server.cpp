@@ -1,7 +1,19 @@
 #define _XOPEN_SOURCE 700
+#define MAX_IRC_MESSAGE 512
 
 # include "server.hpp"
 # include "client.hpp"
+
+// RFC 2812: Messages should not exceed 512 bytes including \r\n
+static std::string enforceMessageLimit(const std::string& msg)
+{
+	if (msg.length() > MAX_IRC_MESSAGE)
+	{
+		// Truncate to 510 bytes (512 - 2 for \r\n)
+		return msg.substr(0, MAX_IRC_MESSAGE - 2);
+	}
+	return msg;
+}
 
 Server::Server()
 {
@@ -602,6 +614,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								usersLine += it->first;
 							}
 							std::string response = ":" + serverName + " 353 " + nick + " = #" + channelName + " :" + usersLine + "\r\n";
+							response = enforceMessageLimit(response);
 							send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
 							std::string end = ":" + serverName + " 366 " + nick + " #" + channelName + " :End of /NAMES list.\r\n";
 							send(this->_Fds[index].fd, end.c_str(), end.size(), 0);
@@ -832,6 +845,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 							else
 							{
 								std::string response = ":" + serverName + " 332 " + nick + " #" + channelName + " :" + topic + "\r\n";
+								response = enforceMessageLimit(response);
 								send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
 							}
 						}
@@ -857,6 +871,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								
 								this->_channels[channelName].SetTopic(newTopic);
 								std::string confirmMsg = ":" + nick + " TOPIC #" + channelName + " :" + newTopic + "\r\n";
+								confirmMsg = enforceMessageLimit(confirmMsg);
 								send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
 								std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
 							}
@@ -912,6 +927,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								else
 								{
 									std::string privmsgLine = ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #" + target + " :" + message + "\r\n";
+									privmsgLine = enforceMessageLimit(privmsgLine);
 									const std::map<std::string, Client*>& channelClients = this->_channels[target].GetAllClients();
 									for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 									{
@@ -942,6 +958,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								else
 								{
 									std::string privmsgLine = ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG " + target + " :" + message + "\r\n";
+									privmsgLine = enforceMessageLimit(privmsgLine);
 									send(targetClient->GetFd(), privmsgLine.c_str(), privmsgLine.size(), 0);
 									std::cout << CYAN << "[PM] " << senderNick << " -> " << target << ": " << message << RESET << std::endl;
 								}
@@ -1160,23 +1177,9 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 						}
 					}
 				}
-				else if (!client.GetChannelName().empty())
-				{
-					std::string channelName = client.GetChannelName();
-					if (this->_channels.find(channelName) != this->_channels.end())
-					{
-						std::string fullMsg = client.GetNickname() + ": " + Msg + "\n";
-						const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
-						for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
-						{
-							if (it->second && it->second->GetFd() != this->_Fds[index].fd)
-								send(it->second->GetFd(), fullMsg.c_str(), fullMsg.size(), 0);
-						}
-						std::cout << CYAN << "[" << channelName << "] " << client.GetNickname() << ": " << Msg << RESET << std::endl;
-					}
-				}
 				else
 				{
+					// Unknown command - return error for any unrecognized input
 					std::string serverName = "ircserv";
 					std::string nick = client.GetNickname();
 					std::string command = Msg;
