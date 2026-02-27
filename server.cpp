@@ -1,7 +1,19 @@
 #define _XOPEN_SOURCE 700
+#define MAX_IRC_MESSAGE 512
 
 # include "server.hpp"
 # include "client.hpp"
+
+// RFC 2812: Messages should not exceed 512 bytes including \r\n
+static std::string enforceMessageLimit(const std::string& msg)
+{
+	if (msg.length() > MAX_IRC_MESSAGE)
+	{
+		// Truncate to 510 bytes (512 - 2 for \r\n)
+		return msg.substr(0, MAX_IRC_MESSAGE - 2);
+	}
+	return msg;
+}
 
 Server::Server()
 {
@@ -207,7 +219,10 @@ int	Server::pollLoop()
 								flagDisconnect += 1;
 						}
 						if (msg < 0)
-							perror("recv");
+						{
+							// Client disconnected abruptly (e.g., Ctrl+C)
+							flagDisconnect += clientquittingServer(index, buffer);
+						}
 					}
 				}
 				this->disconnectClient(flagDisconnect);
@@ -251,6 +266,18 @@ int	Server::clientquittingServer(int index, char* buffer)
 	close(this->_Fds[index].fd);
 	if (it != this->_Client.end())
 	{
+		// Remove client from their channel if they're in one
+		std::string channelName = it->second.GetChannelName();
+		if (!channelName.empty() && this->_channels.find(channelName) != this->_channels.end())
+		{
+			this->_channels[channelName].RemoveClient(it->second.GetNickname());
+			if (this->_channels[channelName].GetClientCount() == 0)
+			{
+				this->_channels.erase(channelName);
+				std::cerr << YELLOW << "Channel " << channelName << " deleted (empty)" << RESET << std::endl;
+			}
+		}
+		
 		it->second.SetErase();
 		// std::cout << YELLOW << "Client " << it->second.GetNickname() << " _toErase = " << it->second.GetErase() << RESET << std::endl;
 		return (1);
@@ -296,24 +323,25 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					if (pass == this->_password)
 					{
 						client.SetAuthenticated(true);
-						std::string ok = "Password accepted.\n";
-						send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
 					}
 					else
 					{
-						std::string err = "ERROR: bad password\n";
+						std::string serverName = "ircserv";
+						std::string err = ":" + serverName + " 464 * PASS :Password incorrect\r\n";
 						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
 				else
 				{
-					std::string err = "ERROR: invalid authentication command\n";
+					std::string serverName = "ircserv";
+					std::string err = ":" + serverName + " 461 * PASS :Not enough parameters\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				}
 			}
 			else
 			{
-				std::string err = "ERROR: not authenticated\n";
+				std::string serverName = "ircserv";
+				std::string err = ":" + serverName + " 451 * :You have not registered\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 			}
 		}
@@ -350,7 +378,11 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					}
 					else
 					{
-						std::string err = "ERROR: invalid nickname command\n";
+						std::string serverName = "ircserv";
+						std::string nick = client.GetNickname();
+						if (nick.empty())
+							nick = "*";
+						std::string err = ":" + serverName + " 431 " + nick + " :No nickname given\r\n";
 						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
@@ -374,17 +406,26 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 							{
 								std::string mode = rest.substr(0, thirdSpace);
 								rest = rest.substr(thirdSpace + 1);
+								// Now rest should be "<unused> :<realname>"
+								// Find the colon that marks the realname start
 								size_t colonPos = rest.find(":");
-								if (colonPos != std::string::npos && colonPos + 1 < rest.length())
-								{
-									std::string realname = rest.substr(colonPos + 1);
-									client.SetUsername(username);
-									client.SetRealname(realname);
-								}
-								else
+								// The colon should be at the start or after the unused parameter
+								if (colonPos == std::string::npos)
 								{
 									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
 									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else if (colonPos + 1 >= rest.length())
+								{
+									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
+									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+								}
+								else
+								{
+									// Extract realname after the colon
+									std::string realname = rest.substr(colonPos + 1);
+									client.SetUsername(username);
+									client.SetRealname(realname);
 								}
 							}
 							else
@@ -407,13 +448,32 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 				}
 				else
 				{
-					std::string err = "ERROR: need NICK and USER\n";
+					std::string serverName = "ircserv";
+					std::string nick = client.GetNickname();
+					if (nick.empty())
+						nick = "*";
+					std::string err = ":" + serverName + " 451 " + nick + " :You have not registered\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				}
 				if (!client.GetNickname().empty() && !client.GetUsername().empty())
 				{
 					std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
-					std::string ok = "Welcome! Use HELP to see available commands.\n";
+					std::string serverName = "ircserv";
+					std::string nick = client.GetNickname();
+					
+					std::string welcome = ":" + serverName + " 001 " + nick + " :Welcome to the IRC network " + nick + "\r\n";
+					send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
+					
+					std::string yourhost = ":" + serverName + " 002 " + nick + " :Your host is " + serverName + ", running version 1.0\r\n";
+					send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
+					
+					std::string created = ":" + serverName + " 003 " + nick + " :This server was created Mon Feb 27 2026\r\n";
+					send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
+					
+					std::string myinfo = ":" + serverName + " 004 " + nick + " " + serverName + " 1.0 ao iklmnst\r\n";
+					send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
+					
+					std::string ok = "Use HELP to see available commands.\n";
 					send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
 				}
 			}
