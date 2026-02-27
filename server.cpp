@@ -262,51 +262,6 @@ int	Server::clientquittingServer(int index, char* buffer)
 	}
 }
 
-void	Server::initCmds()
-{
-	_cmds["HELP"] = &Server::cmdHelp;
-	_cmds["JOIN"] = &Server::cmdJoin;
-	_cmds["NAMES"] = &Server::cmdNames;
-	_cmds["LIST"] = &Server::cmdList;
-	_cmds["MODE"] = &Server::cmdMode;
-	_cmds["TOPIC"] = &Server::cmdTopic;
-	_cmds["PRIVMSG"] = &Server::cmdPrivmsg;
-	_cmds["PART"] = &Server::cmdPart;
-	_cmds["QUIT"] = &Server::cmdQuit;
-	_cmds["KICK"] = &Server::cmdKick;
-	_cmds["INVITE"] = &Server::cmdInvite;
-}
-
-std::string	getCmdFromMsg(std::string Msg)
-{
-	std::string cmd;
-
-	size_t start = Msg.find_first_not_of(" \t\r\n");
-	if (start == std::string::npos)
-		return (Msg);
-	size_t spacePos = Msg.find(' ');
-	cmd = Msg.substr(start, spacePos);
-	return (cmd);
-}
-
-int Server::cmdHandler(std::string Msg, int index, Client &client)
-{
-	std::string cmd = getCmdFromMsg(Msg);
-	std::map<std::string, cmdPtr>::iterator it = _cmds.find(cmd);
-	int	quitReturn = 0;
-
-	if (it != _cmds.end())
-	{
-		cmdPtr func = it->second;
-		quitReturn = (this->*func)(Msg, index, client);
-	}
-	else if (!client.GetChannelName().empty())
-		msgChannel(Msg, index, client);
-	else
-		std::cerr << "Command not found: " << Msg << std::endl;
-	return (quitReturn);
-}
-
 int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 {
 	int quitFlag = 0;
@@ -465,7 +420,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			else
 			{
 				initCmds();
-				cmdHandler(Msg, index, client);
+				quitFlag = cmdHandler(Msg, index, client);
 			}
 		}
 		pos = ClientMsg.find("\r\n");
@@ -502,11 +457,6 @@ void Server::disconnectClient(int nbrClient)
 	}
 	return ;
 }
-
-// void	Server::signalHandling()
-// {
-// 	signal(SIGINT, SIGQUIT);
-// }
 
 struct pollfd& Server::operator[](size_t index)
 {

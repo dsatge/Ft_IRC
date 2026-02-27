@@ -1,6 +1,45 @@
 # include "server.hpp"
 # include "client.hpp"
 
+void	Server::initCmds()
+{
+	_cmds["HELP"] = &Server::cmdHelp;
+	_cmds["JOIN"] = &Server::cmdJoin;
+	_cmds["NAMES"] = &Server::cmdNames;
+	_cmds["LIST"] = &Server::cmdList;
+	_cmds["MODE"] = &Server::cmdMode;
+	_cmds["TOPIC"] = &Server::cmdTopic;
+	_cmds["PRIVMSG"] = &Server::cmdPrivmsg;
+	_cmds["PART"] = &Server::cmdPart;
+	_cmds["QUIT"] = &Server::cmdQuit;
+	_cmds["KICK"] = &Server::cmdKick;
+	_cmds["INVITE"] = &Server::cmdInvite;
+}
+
+int Server::cmdHandler(std::string Msg, int index, Client &client)
+{
+	std::string cmd = getCmdFromMsg(Msg);
+	std::map<std::string, cmdPtr>::iterator it = _cmds.find(cmd);
+	int	quitReturn = 0;
+
+	if (it != _cmds.end())
+	{
+		cmdPtr func = it->second;
+		quitReturn = (this->*func)(Msg, index, client);
+	}
+	else if (!client.GetChannelName().empty())
+		msgChannel(Msg, index, client);
+	else
+		std::cerr << "Command not found: " << Msg << std::endl;
+	return (quitReturn);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/////////////////////////     FEATURES DEFINITIONS     /////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
 int Server::cmdHelp(std::string Msg, int index, Client &client)
 {
 	(void) Msg;

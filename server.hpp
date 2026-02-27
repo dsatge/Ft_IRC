@@ -75,6 +75,7 @@ class Server
 
 		/// Commands Features
 		int	cmdHandler(std::string Msg, int index, Client &client);
+		std::string	getCmdFromMsg(std::string Msg);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 
