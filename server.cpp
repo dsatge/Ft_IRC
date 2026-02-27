@@ -262,32 +262,50 @@ int	Server::clientquittingServer(int index, char* buffer)
 	}
 }
 
-// Server* Server::cmdHandler(std::string msg)
-// {
-// 	std::string cmdList[11] = {
-// 			"HELP",
-// 			"JOIN",
-// 			"NAMES",
-// 			"LIST",
-// 			"MODE",
-// 			"TOPIC",
-// 			"PRIVMSG",
-// 			"PART",
-// 			"QUIT",
-// 			"KICK",
-// 			"INVITE",
-// 	}
+void	Server::initCmds()
+{
+	_cmds["HELP"] = &Server::cmdHelp;
+	_cmds["JOIN"] = &Server::cmdJoin;
+	_cmds["NAMES"] = &Server::cmdNames;
+	_cmds["LIST"] = &Server::cmdList;
+	_cmds["MODE"] = &Server::cmdMode;
+	_cmds["TOPIC"] = &Server::cmdTopic;
+	_cmds["PRIVMSG"] = &Server::cmdPrivmsg;
+	_cmds["PART"] = &Server::cmdPart;
+	_cmds["QUIT"] = &Server::cmdQuit;
+	_cmds["KICK"] = &Server::cmdKick;
+	_cmds["INVITE"] = &Server::cmdInvite;
+}
 
-// 	Server* (*functionCmdList[11])(std::string) = {
+std::string	getCmdFromMsg(std::string Msg)
+{
+	std::string cmd;
 
-// 	}
+	size_t start = Msg.find_first_not_of(" \t\r\n");
+	if (start == std::string::npos)
+		return (Msg);
+	size_t spacePos = Msg.find(' ');
+	cmd = Msg.substr(start, spacePos);
+	return (cmd);
+}
 
-// 	for (int i = 0; i < 11; i++)
-// 	{
-// 		if (msg == cmdList)
-// 			return (functionCmdList[i]);
-// 	}
-// }
+int Server::cmdHandler(std::string Msg, int index, Client &client)
+{
+	std::string cmd = getCmdFromMsg(Msg);
+	std::map<std::string, cmdPtr>::iterator it = _cmds.find(cmd);
+	int	quitReturn = 0;
+
+	if (it != _cmds.end())
+	{
+		cmdPtr func = it->second;
+		quitReturn = (this->*func)(Msg, index, client);
+	}
+	else if (!client.GetChannelName().empty())
+		msgChannel(Msg, index, client);
+	else
+		std::cerr << "Command not found: " << Msg << std::endl;
+	return (quitReturn);
+}
 
 int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 {
@@ -446,35 +464,8 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			}
 			else
 			{
-				if (Msg == "HELP")
-					cmdHelp(Msg, index, client);
-				else if (Msg.substr(0, 4) == "JOIN")
-					cmdJoin(Msg, index, client);
-				else if (Msg.substr(0, 5) == "NAMES")
-					cmdNames(Msg, index, client);
-				else if (Msg == "LIST")
-					cmdList(Msg, index, client);
-				else if (Msg.substr(0, 4) == "MODE")
-					cmdMode(Msg, index, client);
-				else if (Msg.substr(0, 5) == "TOPIC")
-					cmdTopic(Msg, index, client);
-				else if (Msg.substr(0, 7) == "PRIVMSG")
-					cmdPrivmsg(Msg, index, client);
-				else if (Msg.substr(0, 4) == "PART")
-					cmdPart(Msg, index, client);
-				else if (Msg.substr(0, 4) == "QUIT")
-					quitFlag = cmdQuit(Msg, index, client);
-				else if (Msg.substr(0, 4) == "KICK")
-					cmdKick(Msg, index, client);
-				else if (Msg.substr(0, 6) == "INVITE")
-					cmdInvite(Msg, index, client);
-				else if (!client.GetChannelName().empty())
-					msgChannel(Msg, index, client);
-				else
-				{
-					std::string err = "You must JOIN a channel first. Use: JOIN <channel>\n";
-					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				}
+				initCmds();
+				cmdHandler(Msg, index, client);
 			}
 		}
 		pos = ClientMsg.find("\r\n");

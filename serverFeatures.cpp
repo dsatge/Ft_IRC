@@ -1,7 +1,7 @@
 # include "server.hpp"
 # include "client.hpp"
 
-void Server::cmdHelp(std::string Msg, int index, Client client)
+int Server::cmdHelp(std::string Msg, int index, Client &client)
 {
 	(void) Msg;
 	(void) client;
@@ -34,9 +34,10 @@ void Server::cmdHelp(std::string Msg, int index, Client client)
 	help += "HELP                               - Show this help message\n";
 	help += "====================================================\n";
 	send(this->_Fds[index].fd, help.c_str(), help.size(), 0);
+	return (0);
 }
 
-void	Server::cmdJoin(std::string Msg, int index, Client client)
+int	Server::cmdJoin(std::string Msg, int index, Client &client)
 {
 	size_t spacePos = Msg.find(" ");
 	if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
@@ -54,13 +55,13 @@ void	Server::cmdJoin(std::string Msg, int index, Client client)
 			{
 				std::string err = ":ircserv 471 " + client.GetNickname() + " #" + channelName + " :Cannot join channel (+l)\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				return ;
+				return (0);
 			}
 			if (!this->_channels[channelName].GetKey().empty() && key != this->_channels[channelName].GetKey())
 			{
 				std::string err = ":ircserv 475 " + client.GetNickname() + " #" + channelName + " :Cannot join channel (+k)\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				return ;
+				return (0);
 			}
 			if (this->_channels[channelName].IsInviteOnly()
 					&& this->_channels[channelName].GetModerator() != client.GetNickname()
@@ -68,7 +69,7 @@ void	Server::cmdJoin(std::string Msg, int index, Client client)
 			{
 				std::string err = "Channel #" + channelName + " is invite-only.\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				return ;
+				return (0);
 			}
 		}
 		std::string oldChannel = client.GetChannelName();
@@ -103,9 +104,10 @@ void	Server::cmdJoin(std::string Msg, int index, Client client)
 		std::string err = "Usage: JOIN <channel_name>\n";
 		send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 	}
+	return (0);
 }
 
-void Server::cmdNames(std::string Msg, int index, Client client)
+int Server::cmdNames(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -142,9 +144,10 @@ void Server::cmdNames(std::string Msg, int index, Client client)
 		std::string err = ":" + serverName + " 461 " + nick + " NAMES :Not enough parameters\r\n";
 		send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 	}
+	return (0);
 }
 
-void	Server::cmdList(std::string Msg, int index, Client client)
+int	Server::cmdList(std::string Msg, int index, Client &client)
 {
 	(void) Msg;
 	std::string serverName = "ircserv";
@@ -158,9 +161,10 @@ void	Server::cmdList(std::string Msg, int index, Client client)
 	}
 	std::string end = ":" + serverName + " 323 " + nick + " :End of /LIST\r\n";
 	send(this->_Fds[index].fd, end.c_str(), end.size(), 0);
+	return (0);
 }
 
-void Server::cmdMode(std::string Msg, int index, Client client)
+int Server::cmdMode(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -213,7 +217,7 @@ void Server::cmdMode(std::string Msg, int index, Client client)
 			{
 				std::string err = ":" + serverName + " 461 " + nick + " MODE :Not enough parameters\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				return ;
+				return (0);
 			}
 			std::vector<std::string> params;
 			std::string param;
@@ -328,9 +332,10 @@ void Server::cmdMode(std::string Msg, int index, Client client)
 			}
 		}
 	}
+	return (0);
 }
 
-void	Server::cmdTopic(std::string Msg, int index, Client client)
+int	Server::cmdTopic(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -385,7 +390,7 @@ void	Server::cmdTopic(std::string Msg, int index, Client client)
 				{
 					std::string err = ":" + serverName + " 461 " + nick + " TOPIC :Not enough parameters\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-					return ;
+					return (0);
 				}
 				newTopic.erase(0, 1);
 
@@ -404,9 +409,10 @@ void	Server::cmdTopic(std::string Msg, int index, Client client)
 			}
 		}
 	}
+	return (0);
 }
 
-void	Server::cmdPrivmsg(std::string Msg, int index, Client client)
+int	Server::cmdPrivmsg(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string senderNick = client.GetNickname();
@@ -434,7 +440,7 @@ void	Server::cmdPrivmsg(std::string Msg, int index, Client client)
 			{
 				std::string err = ":" + serverName + " 412 " + senderNick + " :No text to send\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				return ;
+				return (0);
 			}
 			message.erase(0, 1);
 			
@@ -491,9 +497,10 @@ void	Server::cmdPrivmsg(std::string Msg, int index, Client client)
 			}
 		}
 	}
+	return (0);
 }
 
-void	Server::cmdPart(std::string Msg, int index, Client client)
+int	Server::cmdPart(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -537,9 +544,10 @@ void	Server::cmdPart(std::string Msg, int index, Client client)
 		std::string err = ":" + serverName + " 461 " + nick + " PART :Not enough parameters\r\n";
 		send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 	}
+	return (0);
 }
 
-int Server::cmdQuit(std::string Msg, int index, Client client)
+int Server::cmdQuit(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -573,7 +581,7 @@ int Server::cmdQuit(std::string Msg, int index, Client client)
 	return (1);
 }
 
-void	Server::cmdKick(std::string Msg, int index, Client client)
+int	Server::cmdKick(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -633,9 +641,10 @@ void	Server::cmdKick(std::string Msg, int index, Client client)
 			}
 		}
 	}
+	return (0);
 }
 
-void	Server::cmdInvite(std::string Msg, int index, Client client)
+int	Server::cmdInvite(std::string Msg, int index, Client &client)
 {
 	std::string serverName = "ircserv";
 	std::string nick = client.GetNickname();
@@ -703,9 +712,10 @@ void	Server::cmdInvite(std::string Msg, int index, Client client)
 			}
 		}
 	}
+	return (0);
 }
 
-void	Server::msgChannel(std::string Msg, int index, Client client)
+int	Server::msgChannel(std::string Msg, int index, Client &client)
 {
 	std::string channelName = client.GetChannelName();
 	if (this->_channels.find(channelName) != this->_channels.end())
@@ -719,5 +729,5 @@ void	Server::msgChannel(std::string Msg, int index, Client client)
 		}
 		std::cout << CYAN << "[" << channelName << "] " << client.GetNickname() << ": " << Msg << RESET << std::endl;
 	}
-
+	return (0);
 }

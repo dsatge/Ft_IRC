@@ -8,6 +8,9 @@ class Client;
 
 class Server
 {
+	public :
+		typedef int (Server::*cmdPtr)(std::string, int, Client&);
+
 	private :
 		int	_serverFd;
 		int	_port;
@@ -16,6 +19,23 @@ class Server
 		std::map<std::string, Channel> _channels;
 		std::vector <struct pollfd>	_Fds;
 		std::map<int, Client>		_Client;
+
+		/// Features Commands :
+		std::map<std::string, cmdPtr> _cmds;
+		void	initCmds();
+		int	cmdHelp(std::string Msg, int index, Client &client);
+		int	cmdJoin(std::string Msg, int index, Client &client);
+		int	cmdNames(std::string Msg, int index, Client &client);
+		int	cmdList(std::string Msg, int index, Client &client);
+		int	cmdMode(std::string Msg, int index, Client &client);
+		int	cmdTopic(std::string Msg, int index, Client &client);
+		int	cmdPrivmsg(std::string Msg, int index, Client &client);
+		int	cmdPart(std::string Msg, int index, Client &client);
+		int	cmdQuit(std::string Msg, int index, Client &client);
+		int	cmdKick(std::string Msg, int index, Client &client);
+		int	cmdInvite(std::string Msg, int index, Client &client);
+		int	msgChannel(std::string Msg, int index, Client &client);
+
 	public :
 		Server();
 		Server(std::string port, std::string password);
@@ -54,19 +74,7 @@ class Server
 		void	closeFds();
 
 		/// Commands Features
-		// Server*	cmdHandler(std::string msg);
-		void	cmdHelp(std::string Msg, int index, Client client);
-		void	cmdJoin(std::string Msg, int index, Client client);
-		void	cmdNames(std::string Msg, int index, Client client);
-		void	cmdList(std::string Msg, int index, Client client);
-		void	cmdMode(std::string Msg, int index, Client client);
-		void	cmdTopic(std::string Msg, int index, Client client);
-		void	cmdPrivmsg(std::string Msg, int index, Client client);
-		void	cmdPart(std::string Msg, int index, Client client);
-		int		cmdQuit(std::string Msg, int index, Client client);
-		void	cmdKick(std::string Msg, int index, Client client);
-		void	cmdInvite(std::string Msg, int index, Client client);
-		void	msgChannel(std::string Msg, int index, Client client);
+		int	cmdHandler(std::string Msg, int index, Client &client);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 
