@@ -1,4 +1,4 @@
-# include "server.hpp"
+#include "server.hpp"
 
 std::string	Server::getCmdFromMsg(std::string Msg)
 {
@@ -11,3 +11,4 @@ std::string	Server::getCmdFromMsg(std::string Msg)
 	cmd = Msg.substr(start, spacePos);
 	return (cmd);
 }
+

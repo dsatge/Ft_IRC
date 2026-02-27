@@ -1,18 +1,17 @@
 #include "channel.hpp"
 #include "client.hpp"
 
-Channel::Channel() : _channelName("default"), _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
+Channel::Channel() : _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
 
-Channel::Channel(const std::string &name) : _channelName(name), _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
+Channel::Channel(const std::string &) : _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
 
 Channel::Channel(const Channel &other)
-	: _channelName(other._channelName), _moderator(other._moderator), _topic(other._topic), _inviteOnly(other._inviteOnly), _topicRestricted(other._topicRestricted), _key(other._key), _userLimit(other._userLimit), _clients(other._clients) {}
+	: _moderator(other._moderator), _topic(other._topic), _inviteOnly(other._inviteOnly), _topicRestricted(other._topicRestricted), _key(other._key), _userLimit(other._userLimit), _clients(other._clients) {}
 
 Channel& Channel::operator=(const Channel &other)
 {
 	if (this != &other)
 	{
-		this->_channelName = other._channelName;
 		this->_moderator = other._moderator;
 		this->_topic = other._topic;
 		this->_inviteOnly = other._inviteOnly;
@@ -26,11 +25,6 @@ Channel& Channel::operator=(const Channel &other)
 
 Channel::~Channel() {}
 
-void Channel::SetChannelName(const std::string &name)
-{
-	this->_channelName = name;
-}
-
 void Channel::AddClient(const std::string &nickname, Client *client)
 {
 	this->_clients[nickname] = client;
@@ -39,11 +33,6 @@ void Channel::AddClient(const std::string &nickname, Client *client)
 void Channel::RemoveClient(const std::string &nickname)
 {
 	this->_clients.erase(nickname);
-}
-
-std::string Channel::GetChannelName() const
-{
-	return (this->_channelName);
 }
 
 void Channel::SetModerator(const std::string &nickname)

@@ -1,30 +1,16 @@
 #define _XOPEN_SOURCE 700
-#define MAX_IRC_MESSAGE 512
 
 # include "server.hpp"
 # include "client.hpp"
 
-// RFC 2812: Messages should not exceed 512 bytes including \r\n
-static std::string enforceMessageLimit(const std::string& msg)
-{
-	if (msg.length() > MAX_IRC_MESSAGE)
-	{
-		// Truncate to 510 bytes (512 - 2 for \r\n)
-		return msg.substr(0, MAX_IRC_MESSAGE - 2);
-	}
-	return msg;
-}
-
 Server::Server()
 {
-	return ;
 }
 
 Server::Server(std::string port, std::string password)
 {
 	this->_port = atoi(port.c_str());
 	this->_password = password;
-	return ;
 }
 
 Server::Server(const Server &other)
@@ -32,12 +18,9 @@ Server::Server(const Server &other)
 	this->_serverFd = other._serverFd;
 	this->_port = other._port;
 	this->_password = other._password;
-	int	socketsFdsTabLen = this->_Fds.size() - 1;
-	for (int i = 0; i < socketsFdsTabLen; i++)
-	{
-		this->_Fds.push_back(other._Fds[i]);
-	}
-	return ;
+	this->_channels = other._channels;
+	this->_Fds = other._Fds;
+	this->_Client = other._Client;
 }
 
 Server& Server::operator=(const Server &other)
@@ -45,16 +28,17 @@ Server& Server::operator=(const Server &other)
 	if (this != &other)
 	{
 		this->_serverFd = other._serverFd;
+		this->_port = other._port;
 		this->_password = other._password;
-		int	socketsFdsTabLen = other._Fds.size();
-		for (int i = 0; i < (socketsFdsTabLen); i++)
-			this->_Fds.push_back(other._Fds[i]);	}
+		this->_channels = other._channels;
+		this->_Fds = other._Fds;
+		this->_Client = other._Client;
+	}
 	return (*this);
 }
 
 Server::~Server()
 {
-	return ;
 }
 
 void Server::SetServerFd(int serverFd)
@@ -127,13 +111,10 @@ int	Server::setSocket(Server *server)
 	}
 	server->SetServerFd(serverFd.fd);
 	server->AddSocketFds(serverFd);
-	/// set option to reuse adress without wait-time
 	int opt_onOff = 1;
 	setsockopt(this->_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt_onOff, sizeof(opt_onOff));
-	/// set in nonblocking mode
 	if (this->nonBlocking(serverFd.fd) == EXIT_FAILURE)
 		return (EXIT_FAILURE);
-	// fcntl(this->_serverFd, F_SETFL, O_NONBLOCK);
 	return (EXIT_SUCCESS);
 }
 
@@ -220,7 +201,6 @@ int	Server::pollLoop()
 						}
 						if (msg < 0)
 						{
-							// Client disconnected abruptly (e.g., Ctrl+C)
 							flagDisconnect += clientquittingServer(index, buffer);
 						}
 					}
@@ -266,7 +246,6 @@ int	Server::clientquittingServer(int index, char* buffer)
 	close(this->_Fds[index].fd);
 	if (it != this->_Client.end())
 	{
-		// Remove client from their channel if they're in one
 		std::string channelName = it->second.GetChannelName();
 		if (!channelName.empty() && this->_channels.find(channelName) != this->_channels.end())
 		{
@@ -279,7 +258,6 @@ int	Server::clientquittingServer(int index, char* buffer)
 		}
 		
 		it->second.SetErase();
-		// std::cout << YELLOW << "Client " << it->second.GetNickname() << " _toErase = " << it->second.GetErase() << RESET << std::endl;
 		return (1);
 	}
 	else
@@ -355,7 +333,6 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
 					{
 						std::string newNick = Msg.substr(spacePos + 1);
-						// Check if nickname is already in use
 						bool nickExists = false;
 						for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
 						{
@@ -404,12 +381,8 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 							size_t thirdSpace = rest.find(" ");
 							if (thirdSpace != std::string::npos && thirdSpace + 1 < rest.length())
 							{
-								std::string mode = rest.substr(0, thirdSpace);
 								rest = rest.substr(thirdSpace + 1);
-								// Now rest should be "<unused> :<realname>"
-								// Find the colon that marks the realname start
 								size_t colonPos = rest.find(":");
-								// The colon should be at the start or after the unused parameter
 								if (colonPos == std::string::npos)
 								{
 									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
@@ -422,7 +395,6 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								}
 								else
 								{
-									// Extract realname after the colon
 									std::string realname = rest.substr(colonPos + 1);
 									client.SetUsername(username);
 									client.SetRealname(realname);
@@ -505,7 +477,6 @@ void Server::disconnectClient(int nbrClient)
 			if (it->second.GetErase() == true)
 			{
 				std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
-				// close(it->first);
 				this->_Client.erase(it->first);
 				pollfd lastlistfd = this->_Fds.back();
 				this->_Fds.at(i) = lastlistfd;

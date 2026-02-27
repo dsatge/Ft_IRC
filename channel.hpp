@@ -1,14 +1,12 @@
 #pragma once
 
-#include <string>
-#include <map>
+#include "lib.hpp"
 
 class Client;
 
 class Channel
 {
 	private:
-		std::string _channelName;
 		std::string _moderator;
 		std::string _topic;
 		bool _inviteOnly;
@@ -24,7 +22,6 @@ class Channel
 		Channel& operator=(const Channel &other);
 		~Channel();
 
-		void	SetChannelName(const std::string &name);
 		void	AddClient(const std::string &nickname, Client *client);
 		void	RemoveClient(const std::string &nickname);
 		void	SetModerator(const std::string &nickname);
@@ -36,7 +33,6 @@ class Channel
 		void	SetUserLimit(int limit);
 		void	ClearUserLimit();
 
-		std::string	GetChannelName() const;
 		std::string	GetModerator() const;
 		std::string	GetTopic() const;
 		bool	IsInviteOnly() const;

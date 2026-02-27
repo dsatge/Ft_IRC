@@ -1,9 +1,13 @@
 # include "server.hpp"
 # include "client.hpp"
 
+#define MAX_IRC_MESSAGE 512
+
 void	Server::initCmds()
 {
 	_cmds["HELP"] = &Server::cmdHelp;
+	_cmds["PING"] = &Server::cmdPing;
+	_cmds["PONG"] = &Server::cmdPong;
 	_cmds["JOIN"] = &Server::cmdJoin;
 	_cmds["NAMES"] = &Server::cmdNames;
 	_cmds["LIST"] = &Server::cmdList;
@@ -14,6 +18,15 @@ void	Server::initCmds()
 	_cmds["QUIT"] = &Server::cmdQuit;
 	_cmds["KICK"] = &Server::cmdKick;
 	_cmds["INVITE"] = &Server::cmdInvite;
+}
+
+static std::string enforceMessageLimit(const std::string& msg)
+{
+	if (msg.length() > MAX_IRC_MESSAGE)
+	{
+		return msg.substr(0, MAX_IRC_MESSAGE - 2) + "\r\n";
+	}
+	return msg;
 }
 
 int Server::cmdHandler(std::string Msg, int index, Client &client)
@@ -27,18 +40,16 @@ int Server::cmdHandler(std::string Msg, int index, Client &client)
 		cmdPtr func = it->second;
 		quitReturn = (this->*func)(Msg, index, client);
 	}
-	else if (!client.GetChannelName().empty())
-		msgChannel(Msg, index, client);
 	else
-		std::cerr << "Command not found: " << Msg << std::endl;
+	{
+		std::string serverName = "ircserv";
+		std::string nick = client.GetNickname();
+		std::string command = cmd;
+		std::string err = ":" + serverName + " 421 " + nick + " " + command + " :Unknown command\r\n";
+		send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+	}
 	return (quitReturn);
 }
-
-
-////////////////////////////////////////////////////////////////////////////////
-/////////////////////////     FEATURES DEFINITIONS     /////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
 
 int Server::cmdHelp(std::string Msg, int index, Client &client)
 {
@@ -76,8 +87,40 @@ int Server::cmdHelp(std::string Msg, int index, Client &client)
 	return (0);
 }
 
+int Server::cmdPing(std::string Msg, int index, Client &client)
+{
+	std::string serverName = "ircserv";
+	std::string nick = client.GetNickname();
+	size_t spacePos = Msg.find(" ");
+
+	if (spacePos == std::string::npos || spacePos + 1 >= Msg.length())
+	{
+		std::string err = ":" + serverName + " 409 " + nick + " :No origin specified\r\n";
+		send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+		return (0);
+	}
+
+	std::string token = Msg.substr(spacePos + 1);
+	if (!token.empty() && token[0] == ':')
+		token.erase(0, 1);
+
+	std::string pong = ":" + serverName + " PONG " + serverName + " :" + token + "\r\n";
+	send(this->_Fds[index].fd, pong.c_str(), pong.size(), 0);
+	return (0);
+}
+
+int Server::cmdPong(std::string Msg, int index, Client &client)
+{
+	(void)Msg;
+	(void)index;
+	(void)client;
+	return (0);
+}
+
 int	Server::cmdJoin(std::string Msg, int index, Client &client)
 {
+	std::string serverName = "ircserv";
+	std::string nick = client.GetNickname();
 	size_t spacePos = Msg.find(" ");
 	if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
 	{
@@ -89,6 +132,12 @@ int	Server::cmdJoin(std::string Msg, int index, Client &client)
 			channelName.erase(0, 1);
 		if (this->_channels.find(channelName) != this->_channels.end())
 		{
+			if (this->_channels[channelName].ClientExists(client.GetNickname()))
+			{
+				std::string err = ":" + serverName + " 443 " + nick + " " + nick + " #" + channelName + " :is already on channel\r\n";
+				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+				return (0);
+			}
 			if (this->_channels[channelName].GetUserLimit() > 0
 				&& this->_channels[channelName].GetClientCount() >= this->_channels[channelName].GetUserLimit())
 			{
@@ -106,7 +155,7 @@ int	Server::cmdJoin(std::string Msg, int index, Client &client)
 					&& this->_channels[channelName].GetModerator() != client.GetNickname()
 					&& !this->_channels[channelName].ClientExists(client.GetNickname()))
 			{
-				std::string err = "Channel #" + channelName + " is invite-only.\n";
+				std::string err = ":" + serverName + " 473 " + nick + " #" + channelName + " :Cannot join channel (+i)\r\n";
 				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				return (0);
 			}
@@ -140,7 +189,9 @@ int	Server::cmdJoin(std::string Msg, int index, Client &client)
 	}
 	else
 	{
-		std::string err = "Usage: JOIN <channel_name>\n";
+		std::string serverName = "ircserv";
+		std::string nick = client.GetNickname();
+		std::string err = ":" + serverName + " 461 " + nick + " JOIN :Not enough parameters\r\n";
 		send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 	}
 	return (0);
@@ -173,6 +224,7 @@ int Server::cmdNames(std::string Msg, int index, Client &client)
 					usersLine += it->first;
 			}
 			std::string response = ":" + serverName + " 353 " + nick + " = #" + channelName + " :" + usersLine + "\r\n";
+			response = enforceMessageLimit(response);
 			send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
 			std::string end = ":" + serverName + " 366 " + nick + " #" + channelName + " :End of /NAMES list.\r\n";
 			send(this->_Fds[index].fd, end.c_str(), end.size(), 0);
@@ -328,7 +380,6 @@ int Server::cmdMode(std::string Msg, int index, Client &client)
 								this->_channels[channelName].SetModerator("");
 						}
 						break;
-						case 'j':
 						case 'l':
 							if (adding)
 							{
@@ -400,7 +451,6 @@ int	Server::cmdTopic(std::string Msg, int index, Client &client)
 		}
 		else if (spacePos2 == std::string::npos)
 		{
-			// Query topic
 			std::string topic = this->_channels[channelName].GetTopic();
 			if (topic.empty())
 			{
@@ -410,12 +460,12 @@ int	Server::cmdTopic(std::string Msg, int index, Client &client)
 			else
 			{
 				std::string response = ":" + serverName + " 332 " + nick + " #" + channelName + " :" + topic + "\r\n";
+				response = enforceMessageLimit(response);
 				send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
 			}
 		}
 		else
 		{
-			// Set topic
 			if (this->_channels[channelName].IsTopicRestricted()
 				&& this->_channels[channelName].GetModerator() != nick)
 			{
@@ -433,18 +483,11 @@ int	Server::cmdTopic(std::string Msg, int index, Client &client)
 				}
 				newTopic.erase(0, 1);
 
-				if (newTopic.size() >= 50)
-				{
-					std::string err = "Topic must be less than 50 characters.\n";
-					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				}
-				else
-				{
-					this->_channels[channelName].SetTopic(newTopic);
-					std::string confirmMsg = ":" + nick + " TOPIC #" + channelName + " :" + newTopic + "\r\n";
-					send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
-					std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
-				}
+				this->_channels[channelName].SetTopic(newTopic);
+				std::string confirmMsg = ":" + nick + " TOPIC #" + channelName + " :" + newTopic + "\r\n";
+				confirmMsg = enforceMessageLimit(confirmMsg);
+				send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+				std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
 			}
 		}
 	}
@@ -483,12 +526,10 @@ int	Server::cmdPrivmsg(std::string Msg, int index, Client &client)
 			}
 			message.erase(0, 1);
 			
-			// Check if target is a channel or a user
 			bool isChannel = (target[0] == '#');
 			
 			if (isChannel)
 			{
-				// Message to channel (RFC 2812)
 				if (target.length() > 1)
 					target.erase(0, 1);
 
@@ -497,9 +538,15 @@ int	Server::cmdPrivmsg(std::string Msg, int index, Client &client)
 					std::string err = ":" + serverName + " 403 " + senderNick + " #" + target + " :No such channel\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				}
+				else if (!this->_channels[target].ClientExists(senderNick))
+				{
+					std::string err = ":" + serverName + " 404 " + senderNick + " #" + target + " :Cannot send to channel\r\n";
+					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
+				}
 				else
 				{
 					std::string privmsgLine = ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #" + target + " :" + message + "\r\n";
+					privmsgLine = enforceMessageLimit(privmsgLine);
 					const std::map<std::string, Client*>& channelClients = this->_channels[target].GetAllClients();
 					for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 					{
@@ -511,7 +558,6 @@ int	Server::cmdPrivmsg(std::string Msg, int index, Client &client)
 			}
 			else
 			{
-				// Message to user (RFC 2812)
 				Client* targetClient = NULL;
 				for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
 				{
@@ -530,6 +576,7 @@ int	Server::cmdPrivmsg(std::string Msg, int index, Client &client)
 				else
 				{
 					std::string privmsgLine = ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG " + target + " :" + message + "\r\n";
+					privmsgLine = enforceMessageLimit(privmsgLine);
 					send(targetClient->GetFd(), privmsgLine.c_str(), privmsgLine.size(), 0);
 					std::cout << CYAN << "[PM] " << senderNick << " -> " << target << ": " << message << RESET << std::endl;
 				}
@@ -750,23 +797,6 @@ int	Server::cmdInvite(std::string Msg, int index, Client &client)
 				}
 			}
 		}
-	}
-	return (0);
-}
-
-int	Server::msgChannel(std::string Msg, int index, Client &client)
-{
-	std::string channelName = client.GetChannelName();
-	if (this->_channels.find(channelName) != this->_channels.end())
-	{
-		std::string fullMsg = client.GetNickname() + ": " + Msg + "\n";
-		const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
-		for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
-		{
-			if (it->second && it->second->GetFd() != this->_Fds[index].fd)
-				send(it->second->GetFd(), fullMsg.c_str(), fullMsg.size(), 0);
-		}
-		std::cout << CYAN << "[" << channelName << "] " << client.GetNickname() << ": " << Msg << RESET << std::endl;
 	}
 	return (0);
 }

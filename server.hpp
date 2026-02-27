@@ -4,6 +4,8 @@
 # include "lib.hpp"
 # include "channel.hpp"
 
+#define MAX_IRC_MESSAGE 512
+
 class Client;
 
 class Server
@@ -15,15 +17,15 @@ class Server
 		int	_serverFd;
 		int	_port;
 		std::string	_password;
-		Channel	_channel;
 		std::map<std::string, Channel> _channels;
 		std::vector <struct pollfd>	_Fds;
 		std::map<int, Client>		_Client;
 
-		/// Features Commands :
 		std::map<std::string, cmdPtr> _cmds;
 		void	initCmds();
 		int	cmdHelp(std::string Msg, int index, Client &client);
+		int	cmdPing(std::string Msg, int index, Client &client);
+		int	cmdPong(std::string Msg, int index, Client &client);
 		int	cmdJoin(std::string Msg, int index, Client &client);
 		int	cmdNames(std::string Msg, int index, Client &client);
 		int	cmdList(std::string Msg, int index, Client &client);
@@ -34,7 +36,6 @@ class Server
 		int	cmdQuit(std::string Msg, int index, Client &client);
 		int	cmdKick(std::string Msg, int index, Client &client);
 		int	cmdInvite(std::string Msg, int index, Client &client);
-		int	msgChannel(std::string Msg, int index, Client &client);
 
 	public :
 		Server();
@@ -44,23 +45,19 @@ class Server
 		~Server();
 
 		
-		/// Setters
 		void	SetServerFd(int serverFd);
 		void	AddSocketFds(pollfd fd);
 		const struct sockaddr*	setSocketAdress();
 		void	SetUpSignals();
 		
-		/// Getters
 		int	GetServerFd() const;
 		int	GetPort() const;
 		std::string	GetPassword() const;
-		// std::vector<struct poolfd> GetListFd() const;
 		std::vector<struct pollfd> GetFdsContainer() const;
 		struct pollfd GetFds(int index) const;
 		int		SizeList();
 		struct pollfd&	operator[](size_t index);
 
-		/// Fonctions
 		int		setSocket(Server *server);
 		int		nonBlocking(int fd);
 		int		bindFt();
@@ -73,9 +70,9 @@ class Server
 		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
 		void	closeFds();
 
-		/// Commands Features
 		int	cmdHandler(std::string Msg, int index, Client &client);
 		std::string	getCmdFromMsg(std::string Msg);
+		// std::string enforceMessageLimit(const std::string& msg);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
 
