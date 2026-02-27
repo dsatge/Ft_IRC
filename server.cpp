@@ -312,8 +312,6 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					if (pass == this->_password)
 					{
 						client.SetAuthenticated(true);
-						std::string ok = "Password accepted.\n";
-						send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
 					}
 					else
 					{
@@ -369,7 +367,11 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					}
 					else
 					{
-						std::string err = "ERROR: invalid nickname command\n";
+						std::string serverName = "ircserv";
+						std::string nick = client.GetNickname();
+						if (nick.empty())
+							nick = "*";
+						std::string err = ":" + serverName + " 431 " + nick + " :No nickname given\r\n";
 						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
@@ -435,13 +437,32 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 				}
 				else
 				{
-					std::string err = "ERROR: need NICK and USER\n";
+					std::string serverName = "ircserv";
+					std::string nick = client.GetNickname();
+					if (nick.empty())
+						nick = "*";
+					std::string err = ":" + serverName + " 451 " + nick + " :You have not registered\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				}
 				if (!client.GetNickname().empty() && !client.GetUsername().empty())
 				{
 					std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
-					std::string ok = "Welcome! Use HELP to see available commands.\n";
+					std::string serverName = "ircserv";
+					std::string nick = client.GetNickname();
+					
+					std::string welcome = ":" + serverName + " 001 " + nick + " :Welcome to the IRC network " + nick + "\r\n";
+					send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
+					
+					std::string yourhost = ":" + serverName + " 002 " + nick + " :Your host is " + serverName + ", running version 1.0\r\n";
+					send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
+					
+					std::string created = ":" + serverName + " 003 " + nick + " :This server was created Mon Feb 27 2026\r\n";
+					send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
+					
+					std::string myinfo = ":" + serverName + " 004 " + nick + " " + serverName + " 1.0 ao iklmnst\r\n";
+					send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
+					
+					std::string ok = "Use HELP to see available commands.\n";
 					send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
 				}
 			}
@@ -516,7 +537,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								&& this->_channels[channelName].GetModerator() != client.GetNickname()
 								&& !this->_channels[channelName].ClientExists(client.GetNickname()))
 							{
-								std::string err = "Channel #" + channelName + " is invite-only.\n";
+								std::string err = ":ircserv 473 " + client.GetNickname() + " #" + channelName + " :Cannot join channel (+i)\r\n";
 								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 								continue;
 							}
@@ -550,7 +571,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 					}
 					else
 					{
-						std::string err = "Usage: JOIN <channel_name>\n";
+						std::string err = ":ircserv 461 " + client.GetNickname() + " JOIN :Not enough parameters\r\n";
 						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 					}
 				}
@@ -834,18 +855,10 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 								}
 								newTopic.erase(0, 1);
 								
-								if (newTopic.size() >= 50)
-								{
-									std::string err = "Topic must be less than 50 characters.\n";
-									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-								}
-								else
-								{
-									this->_channels[channelName].SetTopic(newTopic);
-									std::string confirmMsg = ":" + nick + " TOPIC #" + channelName + " :" + newTopic + "\r\n";
-									send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
-									std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
-								}
+								this->_channels[channelName].SetTopic(newTopic);
+								std::string confirmMsg = ":" + nick + " TOPIC #" + channelName + " :" + newTopic + "\r\n";
+								send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+								std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
 							}
 						}
 					}
@@ -1164,7 +1177,13 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 				}
 				else
 				{
-					std::string err = "You must JOIN a channel first. Use: JOIN <channel>\n";
+					std::string serverName = "ircserv";
+					std::string nick = client.GetNickname();
+					std::string command = Msg;
+					size_t spacePos = Msg.find(" ");
+					if (spacePos != std::string::npos)
+						command = Msg.substr(0, spacePos);
+					std::string err = ":" + serverName + " 421 " + nick + " " + command + " :Unknown command\r\n";
 					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
 				}
 			}
