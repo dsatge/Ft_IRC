@@ -1,0 +1,82 @@
+# include "server.hpp"
+
+void	Server::initErrorMsg()
+{
+	_ErrorMsg[ERR_PASSWDMISMATCH] = "Password incorrect";
+	_ErrorMsg[ERR_NEEDMOREPARAMS] = "Not enough parameters";
+	_ErrorMsg[ERR_NOTREGISTERED] = "You have not registered";
+	_ErrorMsg[ERR_NICKNAMEINUSE] = "Nickname is already in use";
+	_ErrorMsg[ERR_NONICKNAMEGIVEN] = "No nickname given";
+	_ErrorMsg[ERR_UNKNOWNCOMMAND] = "Unknown command";
+	_ErrorMsg[ERR_NOTEXTTOSEND] = "No text to send";
+	_ErrorMsg[ERR_NOORIGIN] = "No origin specified";
+	_ErrorMsg[ERR_NOSUCHNICK] = "No such nick";
+
+	/// FOR CHANNELS
+	_ErrorMsg[ERR_CHANOPRIVSNEEDED] = "You're not channel operator";
+	_ErrorMsg[ERR_BADCHANNELKEY] = "Cannot join channel (+k)";
+	_ErrorMsg[ERR_INVITEONLYCHAN] = "Cannot join channel (+i)";
+	_ErrorMsg[ERR_UNKNOWNMODE] = "is unknown mode char to me";
+	_ErrorMsg[ERR_CHANNELISFULL] = "Cannot join channel (+l)";
+	_ErrorMsg[ERR_USERONCHANNEL] = "is already on channel";
+	_ErrorMsg[ERR_NOTONCHANNEL] = "You're not on that channel";
+	_ErrorMsg[ERR_USERNOTINCHANNEL] = "They are not on that channel";
+	_ErrorMsg[ERR_CANNOTSENDTOCHAN] = "Cannot send to channel";
+	_ErrorMsg[ERR_NOSUCHCHANNEL] = "No such channel";	
+}
+
+void	Server::sendErroMsg(int errorCode, int index, std::string target)
+{
+	if (target.empty())
+		target = "*";
+	std::string serverName = "ircserv";
+	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
+	if (itError != _ErrorMsg.end())
+	{
+		std::string errorMsg = RED + std::string(":" + serverName + " " + intToString(errorCode)
+				+ " " + target + " :" + itError->second) + RESET + "\r\n";
+		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+	}
+}
+
+void	Server::sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword)
+{
+	if (target.empty())
+		target = "*";
+	std::string serverName = "ircserv";
+	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
+	if (itError != _ErrorMsg.end())
+	{
+		std::string errorMsg = RED + std::string(":" + serverName + " " + intToString(errorCode)
+				+ " " + target + " " + keyword + " :" + itError->second) + RESET + "\r\n";
+		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+	}
+}
+
+std::string	Server::dateSetUp()
+{
+	std::time_t now = std::time(0);
+	char buffer[80];
+
+	std::strftime(buffer, 80, "%a %b %d %Y %H:%M:%S", std::localtime(&now));
+	return (buffer);
+}
+
+void	Server::sendWelcomeMsg(int index, std::string target)
+{
+	std::string serverName = "ircserv";
+	std::string welcome = GREEN + std::string(":" + serverName + " 001 " + target + " :Welcome to the IRC network " + target + "") + RESET + "\r\n";
+	send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
+	
+	std::string yourhost = GREEN + std::string(":" + serverName + " 002 " + target + " :Your host is " + serverName + ", running version " + VERSION) + RESET + "\r\n";
+	send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
+	
+	std::string created = GREEN + std::string(":" + serverName + " 003 " + target + " :This server was created " + _date) + RESET + "\r\n";
+	send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
+	
+	std::string myinfo = GREEN + std::string(":" + serverName + " 004 " + target + " " + serverName + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES) + RESET + "\r\n";
+	send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
+	
+	std::string ok = "Use HELP to see available commands.\n";
+	send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+}

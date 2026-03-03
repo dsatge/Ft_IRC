@@ -21,6 +21,7 @@
 # include <string.h>
 # include <stdio.h>
 # include <cerrno>
+# include <ctime>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
