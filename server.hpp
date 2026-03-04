@@ -7,6 +7,7 @@
 #define VERSION "1.0"
 #define USER_MODES "o"
 #define CHANNEL_MODES "iklt"
+#define SERVER_NAME "ircserv"
 
 #define MAX_IRC_MESSAGE 512
 #define ERR_NOSUCHNICK 401            // No such nick
@@ -40,6 +41,7 @@ class Server
 {
 	public :
 		typedef int (Server::*cmdPtr)(std::string, int, Client&);
+		typedef int (Server::*cmdPtrMode)(int, bool, std::string, std::string, std::string);
 
 	private :
 		int	_serverFd;
@@ -50,12 +52,15 @@ class Server
 		std::vector <struct pollfd>	_Fds;
 		std::map<int, Client>		_Client;
 		std::map<int, std::string>	_ErrorMsg;
-
+		std::map<char, cmdPtrMode> _Modes;
 		std::map<std::string, cmdPtr> _cmds;
 		/// Errors Messages
 		void	initErrorMsg();
 		void	sendErroMsg(int errorCode, int index, std::string target);
 		void	sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword);
+		void	sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel);
+		void	sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key);
+
 		/// Server Messages
 		void	sendWelcomeMsg(int index, std::string target);
 		/// Features Authentification
@@ -79,7 +84,15 @@ class Server
 		int	cmdQuit(std::string Msg, int index, Client &client);
 		int	cmdKick(std::string Msg, int index, Client &client);
 		int	cmdInvite(std::string Msg, int index, Client &client);
-
+		/// Features modes cmds
+		void	initMode();
+		bool modeNeedsParam(char mode);
+		int modeHandler(char mode, int index, bool adding, std::string user, std::string channelName, std::string param);
+		int	modeI(int index, bool adding, std::string user, std::string channelName, std::string empty);
+		int	modeT(int index, bool adding, std::string user, std::string channelName, std::string empty);
+		int	modeK(int index, bool adding, std::string user, std::string channelName, std::string password);
+		int	modeO(int index, bool adding, std::string user, std::string channelName, std::string target);
+		int	modeL(int index, bool adding, std::string user, std::string channelName, std::string limit);
 	public :
 		Server();
 		Server(std::string port, std::string password);

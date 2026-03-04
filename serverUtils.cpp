@@ -29,26 +29,51 @@ void	Server::sendErroMsg(int errorCode, int index, std::string target)
 {
 	if (target.empty())
 		target = "*";
-	std::string serverName = "ircserv";
 	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
 	if (itError != _ErrorMsg.end())
 	{
-		std::string errorMsg = RED + std::string(":" + serverName + " " + intToString(errorCode)
-				+ " " + target + " :" + itError->second) + RESET + "\r\n";
+		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
+				+ " " + target + " :" + itError->second + RESET + "\r\n";
 		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
 	}
 }
+
+void	Server::sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel)
+{
+	if (target.empty())
+		target = "*";
+	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
+	if (itError != _ErrorMsg.end())
+	{
+		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
+				+ " " + target + " #" + channel + " :" + itError->second + RESET + "\r\n";
+		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+	}
+}
+
+void	Server::sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key)
+{
+	if (target.empty())
+		target = "*";
+	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
+	if (itError != _ErrorMsg.end())
+	{
+		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
+				+ " " + target + " " + key + " #" + channel + " :" + itError->second + RESET + "\r\n";
+		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+	}
+}
+
 
 void	Server::sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword)
 {
 	if (target.empty())
 		target = "*";
-	std::string serverName = "ircserv";
 	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
 	if (itError != _ErrorMsg.end())
 	{
-		std::string errorMsg = RED + std::string(":" + serverName + " " + intToString(errorCode)
-				+ " " + target + " " + keyword + " :" + itError->second) + RESET + "\r\n";
+		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
+				+ " " + target + " " + keyword + " :" + itError->second + RESET + "\r\n";
 		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
 	}
 }
@@ -64,17 +89,16 @@ std::string	Server::dateSetUp()
 
 void	Server::sendWelcomeMsg(int index, std::string target)
 {
-	std::string serverName = "ircserv";
-	std::string welcome = GREEN + std::string(":" + serverName + " 001 " + target + " :Welcome to the IRC network " + target + "") + RESET + "\r\n";
+	std::string welcome = std::string(GREEN )+ ":" + SERVER_NAME + " 001 " + target + " :Welcome to the IRC network " + target + RESET + "\r\n";
 	send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
 	
-	std::string yourhost = GREEN + std::string(":" + serverName + " 002 " + target + " :Your host is " + serverName + ", running version " + VERSION) + RESET + "\r\n";
+	std::string yourhost = std::string(GREEN) + ":" + SERVER_NAME + " 002 " + target + " :Your host is " + SERVER_NAME + ", running version " + VERSION + RESET + "\r\n";
 	send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
 	
-	std::string created = GREEN + std::string(":" + serverName + " 003 " + target + " :This server was created " + _date) + RESET + "\r\n";
+	std::string created = std::string(GREEN) + ":" + SERVER_NAME + " 003 " + target + " :This server was created " + _date + RESET + "\r\n";
 	send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
 	
-	std::string myinfo = GREEN + std::string(":" + serverName + " 004 " + target + " " + serverName + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES) + RESET + "\r\n";
+	std::string myinfo = std::string(GREEN) + ":" + SERVER_NAME + " 004 " + target + " " + SERVER_NAME + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES + RESET + "\r\n";
 	send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
 	
 	std::string ok = "Use HELP to see available commands.\n";
