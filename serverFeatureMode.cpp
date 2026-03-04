@@ -53,8 +53,7 @@ int	Server::modeT(int index, bool adding, std::string user, std::string channelN
 
 int	Server::modeK(int index, bool adding, std::string user, std::string channelName, std::string password)
 {
-	std::cerr << BLUE << "I ENTERED HERE" << RESET << std::endl;
-	if (password.empty())
+	if (password.empty() && adding == true)
 		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, user, "MODE"), EXIT_FAILURE);
 	else if (adding)
 		this->_channels[channelName].SetKey(password);
@@ -67,9 +66,9 @@ int	Server::modeK(int index, bool adding, std::string user, std::string channelN
 
 int	Server::modeO(int index, bool adding, std::string user, std::string channelName, std::string target)
 {
-	if (target.empty())
+	if (target.empty() && adding == true)
 		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, user, "MODE"), EXIT_FAILURE);
-	if (!this->_channels[channelName].ClientExists(target))
+	if (adding == true && !this->_channels[channelName].ClientExists(target))
 	{
 		sendErroMsgCHANNEL_KEY(ERR_USERNOTINCHANNEL, index, user, channelName, target);
 		std::string err = ":" + std::string(SERVER_NAME) + " 441 " + user + " " + target + " #" + channelName + " :They are not on that channel\r\n";
@@ -87,13 +86,15 @@ int	Server::modeO(int index, bool adding, std::string user, std::string channelN
 
 int	Server::modeL(int index, bool adding, std::string user, std::string channelName, std::string limit)
 {
-	if (limit.empty())
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, user, "MODE"), EXIT_FAILURE);
-	int limitNUM = std::atoi(limit.c_str());
-	if (limitNUM <= 0)
+	if (limit.empty() && adding == true)
 		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, user, "MODE"), EXIT_FAILURE);
 	if (adding)
+	{
+		int limitNUM = std::atoi(limit.c_str());
+		if (limitNUM <= 0)
+			return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, user, "MODE"), EXIT_FAILURE);
 		this->_channels[channelName].SetUserLimit(limitNUM);
+	}
 	else
 		this->_channels[channelName].ClearUserLimit();
 	std::string reply = ":" + std::string(SERVER_NAME) + " 324 " + user + " #" + channelName + " " + 'k' + "\r\n";
