@@ -2,6 +2,7 @@
 
 void	Server::initErrorMsg()
 {
+	// ERRORS
 	_ErrorMsg[ERR_PASSWDMISMATCH] = "Password incorrect";
 	_ErrorMsg[ERR_NEEDMOREPARAMS] = "Not enough parameters";
 	_ErrorMsg[ERR_NOTREGISTERED] = "You have not registered";
@@ -12,7 +13,7 @@ void	Server::initErrorMsg()
 	_ErrorMsg[ERR_NOORIGIN] = "No origin specified";
 	_ErrorMsg[ERR_NOSUCHNICK] = "No such nick";
 
-	/// FOR CHANNELS
+	/// ERRORS FOR CHANNELS
 	_ErrorMsg[ERR_CHANOPRIVSNEEDED] = "You're not channel operator";
 	_ErrorMsg[ERR_BADCHANNELKEY] = "Cannot join channel (+k)";
 	_ErrorMsg[ERR_INVITEONLYCHAN] = "Cannot join channel (+i)";
@@ -23,7 +24,37 @@ void	Server::initErrorMsg()
 	_ErrorMsg[ERR_USERNOTINCHANNEL] = "They are not on that channel";
 	_ErrorMsg[ERR_CANNOTSENDTOCHAN] = "Cannot send to channel";
 	_ErrorMsg[ERR_NOSUCHCHANNEL] = "No such channel";	
+
+	/// RETURNS MSG
+	_ErrorMsg[RPL_NOTOPIC] = "No topic is set";
 }
+
+void	Server::sendInfoMsg(int infoCode, int index, std::string target)
+{
+	if (target.empty())
+		target = "*";
+	std::map<int, std::string>::iterator itMsg = _ErrorMsg.find(infoCode);
+	if (itMsg != _ErrorMsg.end())
+	{
+		std::string infoMsg = std::string(BLUE) + ":" + SERVER_NAME + " " + intToString(infoCode)
+				+ " " + target + " :" + itMsg->second + RESET + "\r\n";
+		send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), 0);
+	}
+}
+
+void	Server::sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std::string channel)
+{
+	if (target.empty())
+		target = "*";
+	std::map<int, std::string>::iterator itMsg = _ErrorMsg.find(infoCode);
+	if (itMsg != _ErrorMsg.end())
+	{
+		std::string infoMsg = std::string(BLUE) + ":" + SERVER_NAME + " " + intToString(infoCode)
+				+ " " + target + " #" + channel + " :" + itMsg->second + RESET + "\r\n";
+		send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), 0);
+	}
+}
+
 
 void	Server::sendErroMsg(int errorCode, int index, std::string target)
 {

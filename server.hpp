@@ -25,6 +25,7 @@
 #define ERR_PASSWDMISMATCH 464        // Password incorrect
 
 /* --- Erreurs liées aux Channels --- */
+#define RPL_NOTOPIC 331               // No topic is set
 #define ERR_NOSUCHCHANNEL 403         // No such channel
 #define ERR_CANNOTSENDTOCHAN 404      // Cannot send to channel
 #define ERR_USERNOTINCHANNEL 441      // They are not on that channel
@@ -60,6 +61,8 @@ class Server
 		void	sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword);
 		void	sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel);
 		void	sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key);
+		void	sendInfoMsg(int infoCode, int index, std::string target);	
+		void	sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std::string channel);
 
 		/// Server Messages
 		void	sendWelcomeMsg(int index, std::string target);
