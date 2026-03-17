@@ -83,20 +83,29 @@ int Server::cmdHelp(std::string Msg, int index, Client &client)
 
 int Server::cmdPing(std::string Msg, int index, Client &client)
 {
-	std::string serverName = "ircserv";
+	std::stringstream ss(Msg);
+	std::string	arg;
+	std::vector<std::string> params;
+	std::string token;
+
+	while (ss >> arg)
+	params.push_back(arg);
+	if (params.size() < 2)
+	return (sendErroMsg(ERR_NOORIGIN, index, client.GetNickname()), 0);
+	
+	std::vector<std::string>::iterator itparam = params.begin();
+	// itparam++;
+	std::string param = *itparam++;
+	// if ((param[0] != ':' && params.size() > 2) || param)
+	// 	return(sendErroMsg(ERR_NEEDMOREPARAMS, index, client.GetNickname()), 0);
+	
+
 	size_t spacePos = Msg.find(" ");
-
-	if (spacePos == std::string::npos || spacePos + 1 >= Msg.length())
-	{
-		sendErroMsg(ERR_NOORIGIN, index, client.GetNickname());
-		return (0);
-	}
-
-	std::string token = Msg.substr(spacePos + 1);
+	token = Msg.substr(spacePos + 1);
 	if (!token.empty() && token[0] == ':')
 		token.erase(0, 1);
 
-	std::string pong = ":" + serverName + " PONG " + serverName + " :" + token + "\r\n";
+	std::string pong = ":" + std::string(SERVER_NAME) + " PONG " + SERVER_NAME + " :" + token + "\r\n";
 	send(this->_Fds[index].fd, pong.c_str(), pong.size(), 0);
 	return (0);
 }

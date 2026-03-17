@@ -4,9 +4,11 @@ void	Server::initErrorMsg()
 {
 	// ERRORS
 	_ErrorMsg[ERR_PASSWDMISMATCH] = "Password incorrect";
+	_ErrorMsg[ERR_ALREADYREGISTRED] = "Unauthorized command (already registered)";
 	_ErrorMsg[ERR_NEEDMOREPARAMS] = "Not enough parameters";
 	_ErrorMsg[ERR_NOTREGISTERED] = "You have not registered";
 	_ErrorMsg[ERR_NICKNAMEINUSE] = "Nickname is already in use";
+	_ErrorMsg[ERR_ERRONEUSNICKNAME] = "Erroneous nickname";
 	_ErrorMsg[ERR_NONICKNAMEGIVEN] = "No nickname given";
 	_ErrorMsg[ERR_UNKNOWNCOMMAND] = "Unknown command";
 	_ErrorMsg[ERR_NOTEXTTOSEND] = "No text to send";

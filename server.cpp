@@ -292,9 +292,12 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 		this->_Client.find(this->_Fds[index].fd)->second.SetEraseMsg(0, pos + 2);
 		ClientMsg.erase(0, pos + 2);
 		Client &client = this->_Client.find(this->_Fds[index].fd)->second;
+		std::vector<std::string> args;
+		if (splitArgs(args, Msg) == EXIT_FAILURE)
+			break;
 		if (client.GetAuthenticated() == false)
 		{
-			if (authentificateClientPASS(Msg, index, client) == EXIT_FAILURE)
+			if (authentificateClientPASS(args, index, client) == EXIT_FAILURE)
 				sendErroMsg(451, index, "");
 		}
 		else
@@ -302,7 +305,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			if (client.GetNickname().empty() || client.GetUsername().empty())
 			{
 				initCmdsAuthentification();
-				if (cmdAuthentificationHandler(Msg, index, client) == EXIT_FAILURE)
+				if (cmdAuthentificationHandler(args, index, client) == EXIT_FAILURE)
 					sendErroMsg(451, index, client.GetNickname());
 			}
 			else

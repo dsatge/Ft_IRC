@@ -17,11 +17,11 @@
 #define ERR_NOTEXTTOSEND 412          // No text to send
 #define ERR_UNKNOWNCOMMAND 421        // Unknown command
 #define ERR_NONICKNAMEGIVEN 431       // No nickname given
-#define ERR_ERRONEUSNICKNAME 432
+#define ERR_ERRONEUSNICKNAME 432      // Erroneous nickname
 #define ERR_NICKNAMEINUSE 433         // Nickname is already in use
 #define ERR_NOTREGISTERED 451         // You have not registered
 #define ERR_NEEDMOREPARAMS 461        // Not enough parameters
-#define ERR_ALREADYREGISTRED 462
+#define ERR_ALREADYREGISTRED 462      // Unauthorized command (already registered)
 #define ERR_PASSWDMISMATCH 464        // Password incorrect
 
 /* --- Erreurs liées aux Channels --- */
@@ -41,7 +41,8 @@ class Client;
 class Server
 {
 	public :
-		typedef int (Server::*cmdPtr)(std::string, int, Client&);
+		// typedef int (Server::*cmdPtr)(std::string, int, Client&);
+		typedef int (Server::*cmdPtr)(std::vector<std::string>, int, Client&);
 		typedef int (Server::*cmdPtrMode)(int, bool, std::string, std::string, std::string);
 
 	private :
@@ -68,10 +69,14 @@ class Server
 		void	sendWelcomeMsg(int index, std::string target);
 		/// Features Authentification
 		void	initCmdsAuthentification();
-		int 	cmdAuthentificationHandler(std::string Msg, int index, Client &client);
-		int		authentificateClientPASS(std::string Msg, int index, Client &client);
-		int 	authentificateClientNICK(std::string Msg, int index, Client &client);
-		int 	authentificateClientUSER(std::string Msg, int index, Client &client);
+		// int 	cmdAuthentificationHandler(std::string Msg, int index, Client &client);
+		int 	cmdAuthentificationHandler(std::vector<std::string> argList, int index, Client &client);
+		// int		authentificateClientPASS(std::string Msg, int index, Client &client);
+		int	authentificateClientPASS(std::vector<std::string> argList, int index, Client &client);
+		// int 	authentificateClientNICK(std::string Msg, int index, Client &client);
+		int 	authentificateClientNICK(std::vector<std::string> argList, int index, Client &client);
+		// int 	authentificateClientUSER(std::string Msg, int index, Client &client);
+		int 	authentificateClientUSER(std::vector<std::string> argList, int index, Client &client);
 		/// Features commands
 		void	initCmds();
 		int	cmdHelp(std::string Msg, int index, Client &client);
@@ -129,6 +134,8 @@ class Server
 		void	closeFds();
 
 		int	cmdHandler(std::string Msg, int index, Client &client);
+		bool hasColon(std::string Msg);
+		int	splitArgs(std::vector<std::string> &arglist, std::string Msg);
 		std::string	getCmdFromMsg(std::string Msg);
 		// std::string enforceMessageLimit(const std::string& msg);
 };
