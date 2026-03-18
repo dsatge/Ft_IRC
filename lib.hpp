@@ -29,6 +29,7 @@
 #define YELLOW  "\033[33m"
 #define BLUE    "\033[34m"
 #define MAGENTA "\033[35m"
+#define PINK    "\033[38;2;255;105;180m"
 #define CYAN    "\033[36m"
 #define WHITE   "\033[37m"
 #define BOLD    "\033[1m"

@@ -43,6 +43,7 @@ class Client
 		std::string GetUsername() const;
 		std::string GetRealname() const;
 		std::string GetChannelName() const;
+		std::string GetIP() const;
 		int			GetFd() const;
 };
 

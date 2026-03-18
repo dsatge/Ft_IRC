@@ -172,3 +172,8 @@ int Client::GetFd() const
 {
 	return (this->_fd);	
 }
+
+std::string Client::GetIP() const
+{
+	return (this->_IP);
+}

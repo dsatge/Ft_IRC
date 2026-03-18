@@ -95,11 +95,20 @@ int Server::authentificateClientNICK(std::vector<std::string> argList, int index
 			}
 		}
 		if (nickExists)
-			sendErroMsg(ERR_NICKNAMEINUSE, index, newNick);
+			return (sendErroMsg(ERR_NICKNAMEINUSE, index, newNick), EXIT_FAILURE);
 		if (isValideNick(newNick) == false)
 			return (sendErroMsg(ERR_ERRONEUSNICKNAME, index, newNick), EXIT_FAILURE);
 		else
+		{
+			if (!client.GetNickname().empty())
+			{
+				std::string updateMsg = std::string(YELLOW) + ":" + client.GetNickname() + "!"
+						+ "@localhost NICK :" + newNick + std::string(RESET) + "\r\n";
+				send(this->_Fds[index].fd, updateMsg.c_str(), updateMsg.size(), 0);
+				std::cerr << YELLOW << client.GetNickname() << " changed nick to " << newNick << RESET << std::endl;
+			}
 			client.SetNickname(newNick);
+		}
 	}
 	else
 			sendErroMsg(ERR_NONICKNAMEGIVEN, index, client.GetNickname());
@@ -130,10 +139,6 @@ int Server::authentificateClientUSER(std::vector<std::string> argList, int index
 	if (!client.GetUsername().empty())
 		return (sendErroMsg(ERR_ALREADYREGISTRED, index, nick), EXIT_FAILURE);
 	std::string userName, mode, unUsed, realName;
-	//// needs format : USER (username) (0 - 8 -> flexible) (* / 0 -> flexible) (:username / username)
-	// verifier commence par ':', puis les retirer. 
-	// AUSSI, verifier les char valides
-		//// AVANT ASSIGNATION : verifier si il n y a pas deja un USER enregistre
 	int paramNumber = 0;
 	for (std::vector<std::string>::iterator itArg = argList.begin(); itArg != argList.end(); itArg++)
 	{
@@ -148,9 +153,7 @@ int Server::authentificateClientUSER(std::vector<std::string> argList, int index
 	}
 	if (paramNumber < 5)
 		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "USER"), EXIT_FAILURE);
-	/// check valeur USERname
 	client.SetUsername(userName);
-	/// check valeur RealName
 	client.SetRealname(realName);
 	return (EXIT_SUCCESS);
 }

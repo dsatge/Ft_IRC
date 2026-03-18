@@ -41,7 +41,6 @@ class Client;
 class Server
 {
 	public :
-		// typedef int (Server::*cmdPtr)(std::string, int, Client&);
 		typedef int (Server::*cmdPtr)(std::vector<std::string>, int, Client&);
 		typedef int (Server::*cmdPtrMode)(int, bool, std::string, std::string, std::string);
 
@@ -134,7 +133,6 @@ class Server
 		std::string	removesColon(std::string param);
 		std::string cleanChannelName(std::string channelName);
 		int	splitArgs(std::vector<std::string> &arglist, std::string Msg);
-		std::string	getCmdFromMsg(std::string Msg);
 		// std::string enforceMessageLimit(const std::string& msg);
 };
 std::ostream& operator<<(std::ostream &out, const Server &other);
