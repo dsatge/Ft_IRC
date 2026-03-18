@@ -53,7 +53,7 @@ Then he needs to set his nickname (it will be used to name the client in the ser
 NICK boby
 ```
 
-Then he needs to set the username and features (following the RFC 2812 protocole)  
+Then he needs to set the username and features (following the RFC 2812 protocole). However, as USER parameters are not being used, their content does not need to be strict.
 USER <nickname> <mode> <server_name> :<real_name>  
 \<username\> : Name of the account.  
 \<mode\> : A number between 0 and 8. It set up the initial setup.  
@@ -73,9 +73,9 @@ Here are all the commands available in the server:
 |COMMANDS | UTILITIES |
 |----------:| --------------------------------------------------------------------------|
 |**CHANNEL OPERATION :** &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;| |
-|`QUIT` :\<message\> |Disconnect from server |
-|`JOIN` \<channel\> |Join or create a channel |
-|`PART` \<channel\> |Leave a channel |
+|`QUIT` \[:\<message\>\] |Disconnect from server, with an optional message|
+|`JOIN` \<channel\> \[:\<key\>\] |Join or create a channel, with optionnel key if needed |
+|`PART` \<channel\> \[:\<message\>\] |Leave a channel, with an optional message |
 |`NAMES` \<channel\> |List users in a channel
 |`LIST` |List all channels |
 |`TOPIC` |View channel topic | 
@@ -92,7 +92,6 @@ Here are all the commands available in the server:
 |**MESSAGING options :**&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;| |
 |`PRIVMSG` \<target\> :\<message\> |Send a private message to another user with his nickname |
 |`PRIVMSG` #\<channel\> :\<message\> |Send a message to a channel. Only users in this channel will see this message |
-| \<message\> |When in a group, send a message to the group |
 |**GENERAL options :**&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;| |
 |`HELP` | Show features options *(not RFC 2812 protocol)* |
   
