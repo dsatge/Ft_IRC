@@ -311,7 +311,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			else
 			{
 				initCmds();
-				quitFlag = cmdHandler(Msg, index, client);
+				quitFlag = cmdHandler(args, index, client);
 			}
 		}
 		pos = ClientMsg.find("\r\n");
@@ -335,7 +335,7 @@ void Server::disconnectClient(int nbrClient)
 		{
 			if (it->second.GetErase() == true)
 			{
-				std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
+				// std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
 				this->_Client.erase(it->first);
 				pollfd lastlistfd = this->_Fds.back();
 				this->_Fds.at(i) = lastlistfd;

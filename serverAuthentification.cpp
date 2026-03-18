@@ -80,8 +80,6 @@ bool	isValideNick(std::string nick)
 
 int Server::authentificateClientNICK(std::vector<std::string> argList, int index, Client &client)
 {
-	if (argList.empty())
-		std::cerr << RED << "je die la" << RESET << std::endl;
 	std::vector<std::string>::iterator itArg = argList.begin();
 	itArg++;
 	if (itArg != argList.end())

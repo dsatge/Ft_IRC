@@ -46,16 +46,16 @@ class Server
 		typedef int (Server::*cmdPtrMode)(int, bool, std::string, std::string, std::string);
 
 	private :
-		int	_serverFd;
-		int	_port;
-		std::string	_date;
-		std::string	_password;
-		std::map<std::string, Channel> _channels;
-		std::vector <struct pollfd>	_Fds;
-		std::map<int, Client>		_Client;
-		std::map<int, std::string>	_ErrorMsg;
-		std::map<char, cmdPtrMode> _Modes;
-		std::map<std::string, cmdPtr> _cmds;
+		int								_serverFd;
+		int								_port;
+		std::string						_date;
+		std::string						_password;
+		std::map<std::string, Channel>	_channels;
+		std::vector <struct pollfd>		_Fds;
+		std::map<int, Client>			_Client;
+		std::map<int, std::string>		_ErrorMsg;
+		std::map<char, cmdPtrMode>		_Modes;
+		std::map<std::string, cmdPtr>	_cmds;
 		/// Errors Messages
 		void	initErrorMsg();
 		void	sendErroMsg(int errorCode, int index, std::string target);
@@ -69,29 +69,25 @@ class Server
 		void	sendWelcomeMsg(int index, std::string target);
 		/// Features Authentification
 		void	initCmdsAuthentification();
-		// int 	cmdAuthentificationHandler(std::string Msg, int index, Client &client);
 		int 	cmdAuthentificationHandler(std::vector<std::string> argList, int index, Client &client);
-		// int		authentificateClientPASS(std::string Msg, int index, Client &client);
-		int	authentificateClientPASS(std::vector<std::string> argList, int index, Client &client);
-		// int 	authentificateClientNICK(std::string Msg, int index, Client &client);
+		int		authentificateClientPASS(std::vector<std::string> argList, int index, Client &client);
 		int 	authentificateClientNICK(std::vector<std::string> argList, int index, Client &client);
-		// int 	authentificateClientUSER(std::string Msg, int index, Client &client);
 		int 	authentificateClientUSER(std::vector<std::string> argList, int index, Client &client);
 		/// Features commands
 		void	initCmds();
-		int	cmdHelp(std::string Msg, int index, Client &client);
-		int	cmdPing(std::string Msg, int index, Client &client);
-		int	cmdPong(std::string Msg, int index, Client &client);
-		int	cmdJoin(std::string Msg, int index, Client &client);
-		int	cmdNames(std::string Msg, int index, Client &client);
-		int	cmdList(std::string Msg, int index, Client &client);
-		int	cmdMode(std::string Msg, int index, Client &client);
-		int	cmdTopic(std::string Msg, int index, Client &client);
-		int	cmdPrivmsg(std::string Msg, int index, Client &client);
-		int	cmdPart(std::string Msg, int index, Client &client);
-		int	cmdQuit(std::string Msg, int index, Client &client);
-		int	cmdKick(std::string Msg, int index, Client &client);
-		int	cmdInvite(std::string Msg, int index, Client &client);
+		int	cmdHelp(std::vector<std::string> argList, int index, Client &client);
+		int	cmdPing(std::vector<std::string> argList, int index, Client &client);
+		int	cmdPong(std::vector<std::string> argList, int index, Client &client);
+		int	cmdJoin(std::vector<std::string> argList, int index, Client &client);
+		int	cmdNames(std::vector<std::string> argList, int index, Client &client);
+		int	cmdList(std::vector<std::string> argList, int index, Client &client);
+		int	cmdMode(std::vector<std::string> argList, int index, Client &client);
+		int	cmdTopic(std::vector<std::string> argList, int index, Client &client);
+		int	cmdPrivmsg(std::vector<std::string> argList, int index, Client &client);
+		int	cmdPart(std::vector<std::string> argList, int index, Client &client);
+		int	cmdQuit(std::vector<std::string> argList, int index, Client &client);
+		int	cmdKick(std::vector<std::string> argList, int index, Client &client);
+		int	cmdInvite(std::vector<std::string> argList, int index, Client &client);
 		/// Features modes cmds
 		void	initMode();
 		bool modeNeedsParam(char mode);
@@ -133,8 +129,10 @@ class Server
 		int		clientSendingMessage(int index, char* buffer, size_t bytesSize);
 		void	closeFds();
 
-		int	cmdHandler(std::string Msg, int index, Client &client);
+		int	cmdHandler(std::vector<std::string> argList, int index, Client &client);
 		bool hasColon(std::string Msg);
+		std::string	removesColon(std::string param);
+		std::string cleanChannelName(std::string channelName);
 		int	splitArgs(std::vector<std::string> &arglist, std::string Msg);
 		std::string	getCmdFromMsg(std::string Msg);
 		// std::string enforceMessageLimit(const std::string& msg);
