@@ -11,6 +11,7 @@ Server::Server(std::string port, std::string password)
 {
 	this->_port = atoi(port.c_str());
 	this->_password = password;
+	this->_date = dateSetUp();
 }
 
 Server::Server(const Server &other)
@@ -280,6 +281,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 	size_t pos = ClientMsg.find("\r\n");
 	if (pos == std::string::npos)
 		pos = ClientMsg.find("\n");
+	initErrorMsg();
 	while (pos != std::string::npos)
 	{
 		std::string Msg = ClientMsg.substr(0, pos);
@@ -290,169 +292,26 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 		this->_Client.find(this->_Fds[index].fd)->second.SetEraseMsg(0, pos + 2);
 		ClientMsg.erase(0, pos + 2);
 		Client &client = this->_Client.find(this->_Fds[index].fd)->second;
+		std::vector<std::string> args;
+		if (splitArgs(args, Msg) == EXIT_FAILURE)
+			break;
 		if (client.GetAuthenticated() == false)
 		{
-			if (Msg.substr(0, 4) == "PASS")
-			{
-				size_t spacePos = Msg.find(" ");
-				if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
-				{
-					std::string pass = Msg.substr(spacePos + 1);
-					if (pass == this->_password)
-					{
-						client.SetAuthenticated(true);
-					}
-					else
-					{
-						std::string serverName = "ircserv";
-						std::string err = ":" + serverName + " 464 * PASS :Password incorrect\r\n";
-						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-					}
-				}
-				else
-				{
-					std::string serverName = "ircserv";
-					std::string err = ":" + serverName + " 461 * PASS :Not enough parameters\r\n";
-					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				}
-			}
-			else
-			{
-				std::string serverName = "ircserv";
-				std::string err = ":" + serverName + " 451 * :You have not registered\r\n";
-				send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-			}
+			if (authentificateClientPASS(args, index, client) == EXIT_FAILURE)
+				sendErroMsg(451, index, "");
 		}
 		else
 		{
 			if (client.GetNickname().empty() || client.GetUsername().empty())
 			{
-				if (Msg.substr(0, 4) == "NICK")
-				{
-					size_t spacePos = Msg.find(" ");
-					if (spacePos != std::string::npos && spacePos + 1 < Msg.length())
-					{
-						std::string newNick = Msg.substr(spacePos + 1);
-						bool nickExists = false;
-						for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
-						{
-							if (it->second.GetNickname() == newNick && it->first != this->_Fds[index].fd)
-							{
-								nickExists = true;
-								break;
-							}
-						}
-						if (nickExists)
-						{
-							std::string serverName = "ircserv";
-							std::string err = ":" + serverName + " 433 * " + newNick + " :Nickname is already in use\r\n";
-							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-						}
-						else
-						{
-							client.SetNickname(newNick);
-						}
-					}
-					else
-					{
-						std::string serverName = "ircserv";
-						std::string nick = client.GetNickname();
-						if (nick.empty())
-							nick = "*";
-						std::string err = ":" + serverName + " 431 " + nick + " :No nickname given\r\n";
-						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-					}
-				}
-				else if (Msg.substr(0, 4) == "USER")
-				{
-					std::string serverName = "ircserv";
-					std::string nick = client.GetNickname();
-					if (nick.empty())
-						nick = "*";
-					size_t firstSpace = Msg.find(" ");
-					if (firstSpace != std::string::npos && firstSpace + 1 < Msg.length())
-					{
-						std::string rest = Msg.substr(firstSpace + 1);
-						size_t secondSpace = rest.find(" ");
-						if (secondSpace != std::string::npos && secondSpace + 1 < rest.length())
-						{
-							std::string username = rest.substr(0, secondSpace);
-							rest = rest.substr(secondSpace + 1);
-							size_t thirdSpace = rest.find(" ");
-							if (thirdSpace != std::string::npos && thirdSpace + 1 < rest.length())
-							{
-								rest = rest.substr(thirdSpace + 1);
-								size_t colonPos = rest.find(":");
-								if (colonPos == std::string::npos)
-								{
-									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
-									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-								}
-								else if (colonPos + 1 >= rest.length())
-								{
-									std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
-									send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-								}
-								else
-								{
-									std::string realname = rest.substr(colonPos + 1);
-									client.SetUsername(username);
-									client.SetRealname(realname);
-								}
-							}
-							else
-							{
-								std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
-								send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-							}
-						}
-						else
-						{
-							std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
-							send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-						}
-					}
-					else
-					{
-						std::string err = ":" + serverName + " 461 " + nick + " USER :Not enough parameters\r\n";
-						send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-					}
-				}
-				else
-				{
-					std::string serverName = "ircserv";
-					std::string nick = client.GetNickname();
-					if (nick.empty())
-						nick = "*";
-					std::string err = ":" + serverName + " 451 " + nick + " :You have not registered\r\n";
-					send(this->_Fds[index].fd, err.c_str(), err.size(), 0);
-				}
-				if (!client.GetNickname().empty() && !client.GetUsername().empty())
-				{
-					std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
-					std::string serverName = "ircserv";
-					std::string nick = client.GetNickname();
-					
-					std::string welcome = ":" + serverName + " 001 " + nick + " :Welcome to the IRC network " + nick + "\r\n";
-					send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
-					
-					std::string yourhost = ":" + serverName + " 002 " + nick + " :Your host is " + serverName + ", running version 1.0\r\n";
-					send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
-					
-					std::string created = ":" + serverName + " 003 " + nick + " :This server was created Mon Feb 27 2026\r\n";
-					send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
-					
-					std::string myinfo = ":" + serverName + " 004 " + nick + " " + serverName + " 1.0 ao iklmnst\r\n";
-					send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
-					
-					std::string ok = "Use HELP to see available commands.\n";
-					send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
-				}
+				initCmdsAuthentification();
+				if (cmdAuthentificationHandler(args, index, client) == EXIT_FAILURE)
+					sendErroMsg(451, index, client.GetNickname());
 			}
 			else
 			{
 				initCmds();
-				quitFlag = cmdHandler(Msg, index, client);
+				quitFlag = cmdHandler(args, index, client);
 			}
 		}
 		pos = ClientMsg.find("\r\n");
@@ -476,7 +335,7 @@ void Server::disconnectClient(int nbrClient)
 		{
 			if (it->second.GetErase() == true)
 			{
-				std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
+				// std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
 				this->_Client.erase(it->first);
 				pollfd lastlistfd = this->_Fds.back();
 				this->_Fds.at(i) = lastlistfd;

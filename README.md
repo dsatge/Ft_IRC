@@ -73,7 +73,7 @@ Here are all the commands available in the server:
 |COMMANDS | UTILITIES |
 |----------:| --------------------------------------------------------------------------|
 |**CHANNEL OPERATION :** &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;| |
-|`QUIT` |Disconnect from server |
+|`QUIT` :\<message\> |Disconnect from server |
 |`JOIN` \<channel\> |Join or create a channel |
 |`PART` \<channel\> |Leave a channel |
 |`NAMES` \<channel\> |List users in a channel
