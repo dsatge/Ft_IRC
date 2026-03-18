@@ -56,11 +56,11 @@ int Server::cmdHelp(std::vector<std::string> argList, int index, Client &client)
 	help += "========== AVAILABLE COMMANDS (RFC 2812) ==========\n\n";
 	help += "--- CONNECTION COMMANDS ---\n";
 	help += "NICK <nickname>                    - Set or change your nickname\n";
-	help += "USER <user> <mode> <unused> :<realname> - Set username and realname (: required)\n";
-	help += "QUIT :<message>                    - Disconnect from server (: required)\n\n";
+	help += "USER <user> <mode> <unused> :<realname> - Set username and realname\n";
+	help += "QUIT [:<message>]                    - Disconnect from server (message in option)\n\n";
 	help += "--- CHANNEL OPERATIONS ---\n";
 	help += "JOIN <channel> [key]               - Join a channel (or create if doesn't exist)\n";
-	help += "PART <channel>                     - Leave a channel\n";
+	help += "PART <channel> [:message]          - Leave a channel\n";
 	help += "NAMES <channel>                    - List users in a channel\n";
 	help += "LIST                               - List all channels\n";
 	help += "TOPIC <channel> [:<text>]          - View/set channel topic (: required to set)\n\n";
