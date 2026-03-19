@@ -328,10 +328,18 @@ int	Server::cmdTopic(std::vector<std::string> argList, int index, Client &client
 				newTopic.erase(0, 1);
 
 				this->_channels[channelName].SetTopic(newTopic);
-				std::string confirmMsg = ":" + nick + " TOPIC #" + channelName + " :" + newTopic + "\r\n";
-				confirmMsg = enforceMessageLimit(confirmMsg);
-				send(this->_Fds[index].fd, confirmMsg.c_str(), confirmMsg.size(), 0);
+				
+				std::string topicMsg = ":" + nick + "!" + nick + "@localhost TOPIC #"
+						+ channelName + " :" + newTopic + "\r\n";
+				topicMsg = enforceMessageLimit(topicMsg);
 				std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
+				
+				const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
+				for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+				{
+					if (it->second)
+					send(it->second->GetFd(), topicMsg.c_str(), topicMsg.size(), 0);
+				}
 			}
 		}
 	}
@@ -559,7 +567,7 @@ int	Server::cmdInvite(std::vector<std::string> argList, int index, Client &clien
 					+ targetNick + " #" + targetChannel + std::string(RESET) + "\r\n";
 			send(targetClient->GetFd(), inviteLine.c_str(), inviteLine.size(), 0);
 			
-			std::string inviteConfirm = std::string(PINK) + ":" + SERVER_NAME + " 341 " + client.GetUsername()
+			std::string inviteConfirm = std::string(PINK) + ":" + SERVER_NAME + " 341 "
 					+ targetNick + " #" + targetChannel + std::string(RESET) + "\r\n";
 			send(client.GetFd(), inviteConfirm.c_str(), inviteConfirm.size(), 0);
 			
