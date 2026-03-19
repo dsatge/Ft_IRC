@@ -79,7 +79,7 @@ int	Server::modeO(int index, bool adding, std::string user, std::string channelN
 		this->_channels[channelName].SetModerator(target);
 	else if (this->_channels[channelName].GetModerator() == target)
 		this->_channels[channelName].SetModerator("");
-	std::string reply = ":" + std::string(SERVER_NAME) + " 324 " + user + " #" + channelName + " " + 'k' + "\r\n";
+	std::string reply = ":" + std::string(SERVER_NAME) + " 324 " + user + " #" + channelName + " " + 'o' + "\r\n";
 	send(this->_Fds[index].fd, reply.c_str(), reply.size(), 0);
 	return (EXIT_SUCCESS);
 }
@@ -97,7 +97,7 @@ int	Server::modeL(int index, bool adding, std::string user, std::string channelN
 	}
 	else
 		this->_channels[channelName].ClearUserLimit();
-	std::string reply = ":" + std::string(SERVER_NAME) + " 324 " + user + " #" + channelName + " " + 'k' + "\r\n";
+	std::string reply = ":" + std::string(SERVER_NAME) + " 324 " + user + " #" + channelName + " " + 'l' + "\r\n";
 	send(this->_Fds[index].fd, reply.c_str(), reply.size(), 0);
 	return (EXIT_SUCCESS);
 }

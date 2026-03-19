@@ -68,8 +68,8 @@ bool	isValideNick(std::string nick)
 	if (nick.size() > 9)
 		return (false);
 	char c = nick[0];
-	if (!(isalpha(c) == true || c == '[' || c == ']' || c == '\'' || c == '`' || c == '_' || c == '{' || c == '}' || c == '|'))
-		return (false);
+	if (isalpha(c) == false || (c == '[' || c == ']' || c == '\'' || c == '`' || c == '_' || c == '{' || c == '}' || c == '|'))
+		return (std::cerr << "j ai failli ici" << std::endl, false);
 	for (size_t i = 0; i < nick.size(); i++)
 	{
 		if (isForbiddenChar(nick[i]) == true)
@@ -97,7 +97,10 @@ int Server::authentificateClientNICK(std::vector<std::string> argList, int index
 		if (nickExists)
 			return (sendErroMsg(ERR_NICKNAMEINUSE, index, newNick), EXIT_FAILURE);
 		if (isValideNick(newNick) == false)
+		{
+			std::cerr << GREEN << "wtf : " << newNick << RESET << std::endl;
 			return (sendErroMsg(ERR_ERRONEUSNICKNAME, index, newNick), EXIT_FAILURE);
+		}
 		else
 		{
 			if (!client.GetNickname().empty())

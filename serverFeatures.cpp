@@ -198,7 +198,7 @@ int Server::cmdNames(std::vector<std::string> argList, int index, Client &client
 		{
 			if (!usersLine.empty())
 				usersLine += " ";
-				usersLine += it->first;
+			usersLine += it->first;
 		}
 		std::string response = ":" + std::string(SERVER_NAME) + " 353 " + nick + " = #" + channelName + " :" + usersLine + "\r\n";
 		response = enforceMessageLimit(response);
@@ -275,7 +275,8 @@ int Server::cmdMode(std::vector<std::string> argList, int index, Client &client)
 		if (!mode[i])
 		{
 			itparameter++;
-			mode = *itparameter;
+			if (itparameter != argList.end())
+				mode = *itparameter;
 			i = 0;
 		}
 	}

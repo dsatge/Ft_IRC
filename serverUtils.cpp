@@ -65,7 +65,9 @@ void	Server::sendErroMsg(int errorCode, int index, std::string target)
 	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
 	if (itError != _ErrorMsg.end())
 	{
-		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
+		// std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
+		// 		+ " " + target + " :" + itError->second + RESET + "\r\n";
+		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
 				+ " " + target + " :" + itError->second + RESET + "\r\n";
 		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
 	}
@@ -122,18 +124,18 @@ std::string	Server::dateSetUp()
 
 void	Server::sendWelcomeMsg(int index, std::string target)
 {
-	std::string welcome = std::string(GREEN )+ ":" + SERVER_NAME + " 001 " + target + " :Welcome to the IRC network " + target + RESET + "\r\n";
+	std::string welcome = ":" + std::string(SERVER_NAME) + " 001 " + target + " :Welcome to the IRC network " + target + "\r\n";
 	send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
 	
-	std::string yourhost = std::string(GREEN) + ":" + SERVER_NAME + " 002 " + target + " :Your host is " + SERVER_NAME + ", running version " + VERSION + RESET + "\r\n";
+	std::string yourhost =  ":" + std::string(SERVER_NAME) + " 002 " + target + " :Your host is " + std::string(SERVER_NAME) + ", running version " + VERSION + "\r\n";
 	send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
 	
-	std::string created = std::string(GREEN) + ":" + SERVER_NAME + " 003 " + target + " :This server was created " + _date + RESET + "\r\n";
+	std::string created =  ":" + std::string(SERVER_NAME) + " 003 " + target + " :This server was created " + _date + "\r\n";
 	send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
 	
-	std::string myinfo = std::string(GREEN) + ":" + SERVER_NAME + " 004 " + target + " " + SERVER_NAME + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES + RESET + "\r\n";
+	std::string myinfo =  ":" + std::string(SERVER_NAME) + " 004 " + target + " " + std::string(SERVER_NAME) + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES + "\r\n";
 	send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
 	
-	std::string ok = "Use HELP to see available commands.\n";
-	send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
+	// std::string ok = "Use HELP to see available commands.\n";
+	// send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);
 }
