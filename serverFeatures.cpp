@@ -128,7 +128,7 @@ int	Server::cmdJoin(std::vector<std::string> argList, int index, Client &client)
 	if (itparam == argList.end())
 		key = "";
 	else
-		key = *itparam;
+		key = *itparam;	
 	if (!channelName.empty() && channelName[0] == '#')
 		channelName.erase(0, 1);
 	channelName = cleanChannelName(channelName);
@@ -203,7 +203,7 @@ int Server::cmdNames(std::vector<std::string> argList, int index, Client &client
 		std::string response = ":" + std::string(SERVER_NAME) + " 353 " + nick + " = #" + channelName + " :" + usersLine + "\r\n";
 		response = enforceMessageLimit(response);
 		send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
-		std::string end = ":" + std::string(SERVER_NAME) + " 366 " + nick + " #" + channelName + " :End of /NAMES list.\r\n";
+		std::string end = ":" + std::string(SERVER_NAME) + " 366 " + nick + " #" + channelName + " :End of /NAMES list\r\n";
 		send(this->_Fds[index].fd, end.c_str(), end.size(), 0);
 	}
 	return (0);
@@ -376,8 +376,10 @@ int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &clie
 				sendErroMsgCHANNEL(ERR_CANNOTSENDTOCHAN, index, senderNick, target);
 			else
 			{
-				std::string privmsgLine = std::string(CYAN) + ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #"
-						+ target + " :" + message + std::string(RESET) + "\r\n";
+				// std::string privmsgLine = std::string(CYAN) + ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #"
+				// 		+ target + " :" + message + std::string(RESET) + "\r\n";
+				std::string privmsgLine = ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #"
+						+ target + " :" + message + "\r\n";
 				privmsgLine = enforceMessageLimit(privmsgLine);
 				const std::map<std::string, Client*>& channelClients = this->_channels[target].GetAllClients();
 				for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
@@ -404,8 +406,10 @@ int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &clie
 				sendErroMsgKEY(ERR_NOSUCHNICK, index, senderNick, target);
 			else
 			{
-				std::string privmsgLine = std::string(BLUE) + ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG "
-						+ target + " :" + message + std::string(RESET) + "\r\n";
+				// std::string privmsgLine = std::string(BLUE) + ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG "
+				// 		+ target + " :" + message + std::string(RESET) + "\r\n";
+				std::string privmsgLine = ":" + senderNick + "!" + senderNick + "@localhost PRIVMSG " 
+						+ targetClient->GetNickname() + " :" + message + "\r\n";
 				privmsgLine = enforceMessageLimit(privmsgLine);
 				send(targetClient->GetFd(), privmsgLine.c_str(), privmsgLine.size(), 0);
 				std::cout << BLUE << "[PM] " << senderNick << " -> " << target << ": " << message << RESET << std::endl;
@@ -435,7 +439,7 @@ int	Server::cmdPart(std::vector<std::string> argList, int index, Client &client)
 			std::string quitMessage = "";
 			if (itparameter != argList.end())
 				quitMessage = *itparameter;
-			std::string partLine = std::string(YELLOW) + ":" + nick + " PART #" + channelToQuit + quitMessage + std::string(RESET) + "\r\n";
+			std::string partLine = ":" + nick + "!" + nick + "@localhost PART #" + channelToQuit + " " + quitMessage + "\r\n";
 			const std::map<std::string, Client*>& channelClients = this->_channels[channelToQuit].GetAllClients();
 			for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 			{
@@ -509,8 +513,8 @@ int	Server::cmdKick(std::vector<std::string> argList, int index, Client &client)
 		Client* targetClient = this->_channels[channelName].GetClient(targetNick);
 		if (targetClient)
 		{
-			std::string kickLine = std::string(MAGENTA) + ":" + nick + "!" + client.GetUsername() + "@localhost KICK #"
-					+ channelName + " " + targetNick + std::string(RESET) + "\r\n";
+			std::string kickLine = ":" + nick + "!" + client.GetUsername() + "@localhost KICK #"
+					+ channelName + " " + targetNick + " : \r\n";
 			const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
 			for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 			{
@@ -563,12 +567,12 @@ int	Server::cmdInvite(std::vector<std::string> argList, int index, Client &clien
 			sendErroMsgCHANNEL_KEY(ERR_USERONCHANNEL, index, nick, targetChannel, targetNick);
 		else
 		{
-			std::string inviteLine = std::string(PINK) + ":" + nick + "!" + client.GetUsername() + "@localhost INVITE "
-					+ targetNick + " #" + targetChannel + std::string(RESET) + "\r\n";
+			std::string inviteLine = ":" + nick + "!" + client.GetUsername() + "@localhost INVITE "
+					+ targetNick + " #" + targetChannel + "\r\n";
 			send(targetClient->GetFd(), inviteLine.c_str(), inviteLine.size(), 0);
 			
-			std::string inviteConfirm = std::string(PINK) + ":" + SERVER_NAME + " 341 "
-					+ targetNick + " #" + targetChannel + std::string(RESET) + "\r\n";
+			std::string inviteConfirm = ":" + std::string(SERVER_NAME) + " 341 "
+					+ targetNick + " #" + targetChannel + "\r\n";
 			send(client.GetFd(), inviteConfirm.c_str(), inviteConfirm.size(), 0);
 			
 			this->_channels[targetChannel].AddClient(targetNick, targetClient);

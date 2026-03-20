@@ -105,8 +105,10 @@ int Server::authentificateClientNICK(std::vector<std::string> argList, int index
 		{
 			if (!client.GetNickname().empty())
 			{
-				std::string updateMsg = std::string(YELLOW) + ":" + client.GetNickname() + "!"
-						+ "@localhost NICK :" + newNick + std::string(RESET) + "\r\n";
+				// std::string updateMsg = std::string(YELLOW) + ":" + client.GetNickname() + "!"
+				// 		+ "@localhost NICK :" + newNick + std::string(RESET) + "\r\n";
+				std::string updateMsg = ":" + client.GetNickname() + "!"
+						+ "@localhost NICK :" + newNick + "\r\n";
 				send(this->_Fds[index].fd, updateMsg.c_str(), updateMsg.size(), 0);
 				std::cerr << YELLOW << client.GetNickname() << " changed nick to " << newNick << RESET << std::endl;
 			}

@@ -38,7 +38,9 @@ void	Server::sendInfoMsg(int infoCode, int index, std::string target)
 	std::map<int, std::string>::iterator itMsg = _ErrorMsg.find(infoCode);
 	if (itMsg != _ErrorMsg.end())
 	{
-		std::string infoMsg = std::string(BLUE) + ":" + SERVER_NAME + " " + intToString(infoCode)
+		// std::string infoMsg = std::string(BLUE) + ":" + SERVER_NAME + " " + intToString(infoCode)
+		// 		+ " " + target + " :" + itMsg->second + RESET + "\r\n";
+		std::string infoMsg = ":" + std::string(SERVER_NAME) + " " + intToString(infoCode)
 				+ " " + target + " :" + itMsg->second + RESET + "\r\n";
 		send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), 0);
 	}
@@ -51,7 +53,9 @@ void	Server::sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std
 	std::map<int, std::string>::iterator itMsg = _ErrorMsg.find(infoCode);
 	if (itMsg != _ErrorMsg.end())
 	{
-		std::string infoMsg = std::string(BLUE) + ":" + SERVER_NAME + " " + intToString(infoCode)
+		// std::string infoMsg = std::string(BLUE) + ":" + SERVER_NAME + " " + intToString(infoCode)
+		// 		+ " " + target + " #" + channel + " :" + itMsg->second + RESET + "\r\n";
+		std::string infoMsg = ":" + std::string(SERVER_NAME) + " " + intToString(infoCode)
 				+ " " + target + " #" + channel + " :" + itMsg->second + RESET + "\r\n";
 		send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), 0);
 	}
@@ -80,8 +84,8 @@ void	Server::sendErroMsgCHANNEL(int errorCode, int index, std::string target, st
 	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
 	if (itError != _ErrorMsg.end())
 	{
-		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
-				+ " " + target + " #" + channel + " :" + itError->second + RESET + "\r\n";
+		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
+				+ " " + target + " #" + channel + " :" + itError->second + "\r\n";
 		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
 	}
 }
@@ -93,8 +97,8 @@ void	Server::sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target
 	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
 	if (itError != _ErrorMsg.end())
 	{
-		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
-				+ " " + target + " " + key + " #" + channel + " :" + itError->second + RESET + "\r\n";
+		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
+				+ " " + target + " " + key + " #" + channel + " :" + itError->second + "\r\n";
 		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
 	}
 }
@@ -107,8 +111,8 @@ void	Server::sendErroMsgKEY(int errorCode, int index, std::string target, std::s
 	std::map<int, std::string>::iterator itError = _ErrorMsg.find(errorCode);
 	if (itError != _ErrorMsg.end())
 	{
-		std::string errorMsg = std::string(RED) + ":" + SERVER_NAME + " " + intToString(errorCode)
-				+ " " + target + " " + keyword + " :" + itError->second + RESET + "\r\n";
+		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
+				+ " " + target + " " + keyword + " :" + itError->second + "\r\n";
 		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
 	}
 }
