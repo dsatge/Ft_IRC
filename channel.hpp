@@ -7,13 +7,13 @@ class Client;
 class Channel
 {
 	private:
-		std::string _moderator;
+		int _moderator;
 		std::string _topic;
 		bool _inviteOnly;
 		bool _topicRestricted;
 		std::string _key;
 		int _userLimit;
-		std::map<std::string, Client*> _clients;
+		std::map<int, Client*> _clients;
 
 	public:
 		Channel();
@@ -22,9 +22,9 @@ class Channel
 		Channel& operator=(const Channel &other);
 		~Channel();
 
-		void	AddClient(const std::string &nickname, Client *client);
-		void	RemoveClient(const std::string &nickname);
-		void	SetModerator(const std::string &nickname);
+		void	AddClient(const int fd, Client *client);
+		void	RemoveClient(const int fd);
+		void	SetModerator(const int fd);
 		void	SetTopic(const std::string &topic);
 		void	SetInviteOnly(bool inviteOnly);
 		void	SetTopicRestricted(bool topicRestricted);
@@ -33,14 +33,14 @@ class Channel
 		void	SetUserLimit(int limit);
 		void	ClearUserLimit();
 
-		std::string	GetModerator() const;
+		int	GetModerator() const;
 		std::string	GetTopic() const;
 		bool	IsInviteOnly() const;
 		bool	IsTopicRestricted() const;
 		std::string	GetKey() const;
 		int		GetUserLimit() const;
-		Client*	GetClient(const std::string &nickname) const;
-		const std::map<std::string, Client*>& GetAllClients() const;
-		bool	ClientExists(const std::string &nickname) const;
+		Client*	GetClient(const int fd);
+		const std::map<int, Client*>& GetAllClients() const;
+		bool	ClientExists(const int fd) const;
 		int		GetClientCount() const;
 };

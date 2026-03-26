@@ -1,9 +1,9 @@
 #include "channel.hpp"
 #include "client.hpp"
 
-Channel::Channel() : _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
+Channel::Channel() : _moderator(0), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
 
-Channel::Channel(const std::string &) : _moderator(""), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
+Channel::Channel(const std::string &) : _moderator(0), _topic(""), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(0) {}
 
 Channel::Channel(const Channel &other)
 	: _moderator(other._moderator), _topic(other._topic), _inviteOnly(other._inviteOnly), _topicRestricted(other._topicRestricted), _key(other._key), _userLimit(other._userLimit), _clients(other._clients) {}
@@ -25,22 +25,22 @@ Channel& Channel::operator=(const Channel &other)
 
 Channel::~Channel() {}
 
-void Channel::AddClient(const std::string &nickname, Client *client)
+void Channel::AddClient(int fd, Client *client)
 {
-	this->_clients[nickname] = client;
+	this->_clients[fd] = client;
 }
 
-void Channel::RemoveClient(const std::string &nickname)
+void Channel::RemoveClient(const int fd)
 {
-	this->_clients.erase(nickname);
+	this->_clients.erase(fd);
 }
 
-void Channel::SetModerator(const std::string &nickname)
+void Channel::SetModerator(const int fd)
 {
-	this->_moderator = nickname;
+	this->_moderator = fd;
 }
 
-std::string Channel::GetModerator() const
+int Channel::GetModerator() const
 {
 	return (this->_moderator);
 }
@@ -105,22 +105,22 @@ int Channel::GetUserLimit() const
 	return (this->_userLimit);
 }
 
-Client* Channel::GetClient(const std::string &nickname) const
+Client* Channel::GetClient(const int fd)
 {
-	std::map<std::string, Client*>::const_iterator it = this->_clients.find(nickname);
+	std::map<int, Client*>::iterator it = _clients.find(fd);
 	if (it != this->_clients.end())
 		return (it->second);
 	return (NULL);
 }
 
-const std::map<std::string, Client*>& Channel::GetAllClients() const
+const std::map<int, Client*>& Channel::GetAllClients() const
 {
 	return (this->_clients);
 }
 
-bool Channel::ClientExists(const std::string &nickname) const
+bool Channel::ClientExists(const int fd) const
 {
-	return (this->_clients.find(nickname) != this->_clients.end());
+	return (this->_clients.find(fd) != this->_clients.end());
 }
 
 int Channel::GetClientCount() const

@@ -24,9 +24,9 @@ static std::string enforceMessageLimit(const std::string& msg)
 {
 	if (msg.length() > MAX_IRC_MESSAGE)
 	{
-		return msg.substr(0, MAX_IRC_MESSAGE - 2) + "\r\n";
+		return (msg.substr(0, MAX_IRC_MESSAGE - 2) + "\r\n");
 	}
-	return msg;
+	return (msg);
 }
 
 int Server::cmdHandler(std::vector<std::string> argList, int index, Client &client)
@@ -41,10 +41,10 @@ int Server::cmdHandler(std::vector<std::string> argList, int index, Client &clie
 	if (it != _cmds.end())
 	{
 		cmdPtr func = it->second;
-		quitReturn = (this->*func)(argList, index, client);
+		quitReturn += (this->*func)(argList, index, client);
 	}
 	else
-		sendErroMsgKEY(ERR_UNKNOWNCOMMAND, index, client.GetNickname(), cmd);
+		quitReturn += sendErroMsgKEY(ERR_UNKNOWNCOMMAND, index, client.GetNickname(), cmd, client);
 	return (quitReturn);
 }
 
@@ -80,8 +80,9 @@ int Server::cmdHelp(std::vector<std::string> argList, int index, Client &client)
 	help += "--- GENERAL ---\n";
 	help += "HELP                               - Show this help message\n";
 	help += "====================================================\n";
-	send(this->_Fds[index].fd, help.c_str(), help.size(), 0);
-	return (0);
+	if (send(this->_Fds[index].fd, help.c_str(), help.size(), MSG_NOSIGNAL) == -1)
+		return (client.SetErase(), EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 int Server::cmdPing(std::vector<std::string> argList, int index, Client &client)
@@ -90,7 +91,7 @@ int Server::cmdPing(std::vector<std::string> argList, int index, Client &client)
 	std::string token;
 
 	if (argList.size() < 2)
-	return (sendErroMsg(ERR_NOORIGIN, index, client.GetNickname()), 0);
+		return (sendErroMsg(ERR_NOORIGIN, index, client.GetNickname(), client));
 	
 	std::vector<std::string>::iterator itparam = argList.begin();	
 	itparam++;
@@ -100,8 +101,9 @@ int Server::cmdPing(std::vector<std::string> argList, int index, Client &client)
 	else
 		token = param;
 	std::string pong = ":" + std::string(SERVER_NAME) + " PONG " + SERVER_NAME + " :" + token + "\r\n";
-	send(this->_Fds[index].fd, pong.c_str(), pong.size(), 0);
-	return (0);
+	if (send(this->_Fds[index].fd, pong.c_str(), pong.size(), MSG_NOSIGNAL) == -1)
+		return (client.SetErase(), EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 int Server::cmdPong(std::vector<std::string> argList, int index, Client &client)
@@ -115,14 +117,15 @@ int Server::cmdPong(std::vector<std::string> argList, int index, Client &client)
 int	Server::cmdJoin(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string nick = client.GetNickname();
+	int	nickFd = client.GetFd();
 	if (argList.size() < 2)
-		sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "JOIN");
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "JOIN", client));
 	std::vector<std::string>::iterator itparam = argList.begin();
 	itparam++;
 	
 	std::string channelName, key;
 	if (itparam == argList.end())
-		sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "JOIN");		
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "JOIN", client));
 	channelName = *itparam;
 	itparam++;
 	if (itparam == argList.end())
@@ -134,23 +137,23 @@ int	Server::cmdJoin(std::vector<std::string> argList, int index, Client &client)
 	channelName = cleanChannelName(channelName);
 	if (this->_channels.find(channelName) != this->_channels.end())
 	{
-		if (this->_channels[channelName].ClientExists(nick))
-			return (sendErroMsgCHANNEL_KEY(ERR_USERONCHANNEL, index, nick, channelName, nick), 0);
+		if (this->_channels[channelName].ClientExists(nickFd))
+			return (sendErroMsgCHANNEL_KEY(ERR_USERONCHANNEL, index, nick, channelName, nick, client));
 		if (this->_channels[channelName].GetUserLimit() > 0
 				&& this->_channels[channelName].GetClientCount() >= this->_channels[channelName].GetUserLimit())
-			return (sendErroMsgCHANNEL(ERR_CHANNELISFULL, index, nick, channelName), 0);
+			return (sendErroMsgCHANNEL(ERR_CHANNELISFULL, index, nick, channelName, client));
 		if (!this->_channels[channelName].GetKey().empty() && key != this->_channels[channelName].GetKey())
-			return (sendErroMsgCHANNEL(ERR_BADCHANNELKEY, index, nick, channelName), 0);
+			return (sendErroMsgCHANNEL(ERR_BADCHANNELKEY, index, nick, channelName, client));
 		if (this->_channels[channelName].IsInviteOnly()
-				&& this->_channels[channelName].GetModerator() != nick
-				&& !this->_channels[channelName].ClientExists(nick))
-			return (sendErroMsgCHANNEL(ERR_INVITEONLYCHAN, index, nick, channelName), 0);
+				&& this->_channels[channelName].GetModerator() != nickFd
+				&& !this->_channels[channelName].ClientExists(nickFd))
+			return (sendErroMsgCHANNEL(ERR_INVITEONLYCHAN, index, nick, channelName, client));
 	}
 
 	std::string oldChannel = client.GetChannelName();
 	if (!oldChannel.empty() && this->_channels.find(oldChannel) != this->_channels.end())
 	{
-		this->_channels[oldChannel].RemoveClient(nick);
+		this->_channels[oldChannel].RemoveClient(nickFd);
 		if (this->_channels[oldChannel].GetClientCount() == 0)
 			this->_channels.erase(oldChannel);
 	}
@@ -160,21 +163,22 @@ int	Server::cmdJoin(std::vector<std::string> argList, int index, Client &client)
 	{
 		Channel newChannel(channelName);
 		this->_channels[channelName] = newChannel;
-		this->_channels[channelName].SetModerator(nick);
+		this->_channels[channelName].SetModerator(nickFd);
 		std::cerr << MAGENTA << nick << " is now moderator of #" << channelName << RESET << std::endl;
 	}
 
 	else if (this->_channels[channelName].GetClientCount() == 0)
 	{
-		this->_channels[channelName].SetModerator(nick);
+		this->_channels[channelName].SetModerator(nickFd);
 		std::cerr << MAGENTA << nick << " is now moderator of #" << channelName << RESET << std::endl;
 	}
 
-	this->_channels[channelName].AddClient(nick, &client);
+	this->_channels[channelName].AddClient(nickFd, &client);
 	std::string joinMsg = ":" + nick + "!" + client.GetUsername() + "@localhost JOIN #" + channelName + "\r\n";
-	send(this->_Fds[index].fd, joinMsg.c_str(), joinMsg.size(), 0);
+	if (send(this->_Fds[index].fd, joinMsg.c_str(), joinMsg.size(), MSG_NOSIGNAL) == -1)
+		return (client.SetErase(), EXIT_FAILURE);
 	std::cerr << GREEN << nick << " joined channel " << channelName << RESET << std::endl;
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int Server::cmdNames(std::vector<std::string> argList, int index, Client &client)
@@ -189,22 +193,22 @@ int Server::cmdNames(std::vector<std::string> argList, int index, Client &client
 	if (!channelName.empty() && channelName[0] == '#')
 		channelName.erase(0, 1);
 	if (this->_channels.find(channelName) == this->_channels.end())
-		sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName);
+		return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName, client));
 	else
 	{
 		std::string usersLine = "";
-		const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
-		for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+		const std::map<int, Client*>& channelClients = this->_channels[channelName].GetAllClients();
+		for (std::map<int, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 		{
 			if (!usersLine.empty())
 				usersLine += " ";
-			usersLine += it->first;
+			usersLine += it->second->GetNickname();
 		}
 		std::string response = ":" + std::string(SERVER_NAME) + " 353 " + nick + " = #" + channelName + " :" + usersLine + "\r\n";
+		response += ":" + std::string(SERVER_NAME) + " 366 " + nick + " #" + channelName + " :End of /NAMES list\r\n";
 		response = enforceMessageLimit(response);
-		send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
-		std::string end = ":" + std::string(SERVER_NAME) + " 366 " + nick + " #" + channelName + " :End of /NAMES list\r\n";
-		send(this->_Fds[index].fd, end.c_str(), end.size(), 0);
+		if (send(this->_Fds[index].fd, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
 	return (0);
 }
@@ -214,24 +218,28 @@ int	Server::cmdList(std::vector<std::string> argList, int index, Client &client)
 	(void) argList;
 	std::string nick = client.GetNickname();
 	std::string start = ":" + std::string(SERVER_NAME) + " 321 " + nick + " Channel :Users Name\r\n";
-	send(this->_Fds[index].fd, start.c_str(), start.size(), 0);
+	if (send(this->_Fds[index].fd, start.c_str(), start.size(), MSG_NOSIGNAL) == -1)
+		return (client.SetErase(), EXIT_FAILURE);
 	for (std::map<std::string, Channel>::iterator it = this->_channels.begin(); it != this->_channels.end(); ++it)
 	{
 		std::string line = ":" + std::string(SERVER_NAME) + " 322 " + nick + " #" + it->first + " " + intToString(it->second.GetClientCount()) + " :\r\n";
-		send(this->_Fds[index].fd, line.c_str(), line.size(), 0);
+		if (send(this->_Fds[index].fd, line.c_str(), line.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
 	std::string end = ":" + std::string(SERVER_NAME) + " 323 " + nick + " :End of /LIST\r\n";
-	send(this->_Fds[index].fd, end.c_str(), end.size(), 0);
-	return (0);
+	if (send(this->_Fds[index].fd, end.c_str(), end.size(), MSG_NOSIGNAL) == -1)
+		return (client.SetErase(), EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 int Server::cmdMode(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string nick = client.GetNickname();
+	int	nickFd = client.GetFd();
 	std::string	arg;
 
 	if (argList.size() < 3)
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "MODE"), EXIT_FAILURE);
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "MODE", client));
 	
 	std::vector<std::string>::iterator itparameter = argList.begin();
 
@@ -241,9 +249,9 @@ int Server::cmdMode(std::vector<std::string> argList, int index, Client &client)
 	if (channelName[0] == '#')
 		channelName.erase(0,1);
 	if (this->_channels.find(channelName) == this->_channels.end())
-		return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName), EXIT_FAILURE);
-	if (this->_channels[channelName].GetModerator() != nick)
-		return (sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, channelName), EXIT_FAILURE);
+		return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName, client));
+	if (this->_channels[channelName].GetModerator() != nickFd)
+		return (sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, channelName, client));
 	
 	/// Skip "channel" from list of command -> 'mode' argument
 	itparameter++;
@@ -266,10 +274,10 @@ int Server::cmdMode(std::vector<std::string> argList, int index, Client &client)
 		{
 			itparameter++;
 			if (itparameter == argList.end())
-				return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "MODE"), EXIT_FAILURE);
+				return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "MODE", client));
 			param = *itparameter;
 		}
-		if (modeHandler(mode[i], index, adding, nick, channelName, param) == EXIT_FAILURE)
+		if (modeHandler(mode[i], index, adding, nick, channelName, param, client) == EXIT_FAILURE)
 			return (EXIT_FAILURE);
 		i++;
 		if (!mode[i])
@@ -287,14 +295,15 @@ int Server::cmdMode(std::vector<std::string> argList, int index, Client &client)
 int	Server::cmdTopic(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string nick = client.GetNickname();
+	int	nickFd = client.GetFd();
 	if (argList.size() < 2)
-	sendErroMsg(ERR_NEEDMOREPARAMS, index, nick);
+		return (sendErroMsg(ERR_NEEDMOREPARAMS, index, nick, client));
 	else
 	{
 		std::vector<std::string>::iterator itparameter = argList.begin();
 		itparameter++;
 		if (itparameter == argList.end())
-			sendErroMsg(ERR_NEEDMOREPARAMS, index, nick);
+			return (sendErroMsg(ERR_NEEDMOREPARAMS, index, nick, client));
 		
 		std::string channelName = *itparameter;
 		if (!channelName.empty() && channelName[0] == '#')
@@ -302,29 +311,33 @@ int	Server::cmdTopic(std::vector<std::string> argList, int index, Client &client
 		
 		itparameter++;
 		if (this->_channels.find(channelName) == this->_channels.end())
-			sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName);
+			return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName, client));
 		else if (itparameter == argList.end())
 		{
 			std::string topic = this->_channels[channelName].GetTopic();
 			if (topic.empty())
-				sendInfoMsgCHANNEL(RPL_NOTOPIC, index, nick, channelName);
+				return (sendInfoMsgCHANNEL(RPL_NOTOPIC, index, nick, channelName, client));
 			else
 			{
 				std::string response = ":" + std::string(SERVER_NAME) + " 332 " + nick + " #" + channelName + " :" + topic + "\r\n";
 				response = enforceMessageLimit(response);
-				send(this->_Fds[index].fd, response.c_str(), response.size(), 0);
+				if (send(this->_Fds[index].fd, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
+					return (client.SetErase(), EXIT_FAILURE);
 			}
 		}
 		else
 		{
 			if (this->_channels[channelName].IsTopicRestricted()
-				&& this->_channels[channelName].GetModerator() != nick)
-				sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, channelName);
+				&& this->_channels[channelName].GetModerator() != nickFd)
+			{
+				if (sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, channelName, client) == EXIT_FAILURE)
+					return (EXIT_FAILURE);
+			}
 			else
 			{
 				std::string newTopic = *itparameter;
 				if (newTopic.empty() || newTopic[0] != ':')
-					return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "TOPIC"), 0);
+					return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "TOPIC", client));
 				newTopic.erase(0, 1);
 
 				this->_channels[channelName].SetTopic(newTopic);
@@ -334,34 +347,37 @@ int	Server::cmdTopic(std::vector<std::string> argList, int index, Client &client
 				topicMsg = enforceMessageLimit(topicMsg);
 				std::cerr << MAGENTA << nick << " changed topic of #" << channelName << " to: " << newTopic << RESET << std::endl;
 				
-				const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
-				for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+				const std::map<int, Client*>& channelClients = this->_channels[channelName].GetAllClients();
+				for (std::map<int, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 				{
-					if (it->second)
-					send(it->second->GetFd(), topicMsg.c_str(), topicMsg.size(), 0);
+					if (!it->second->GetFd() || it->second->GetFd() == 0)
+						return (EXIT_FAILURE);
+					if (send(it->second->GetFd(), topicMsg.c_str(), topicMsg.size(), MSG_NOSIGNAL) == -1)
+						return (client.SetErase(), EXIT_FAILURE);
 				}
 			}
 		}
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string senderNick = client.GetNickname();
+	int	senderNickFd = client.GetFd();
 	std::vector<std::string>::iterator itparameter = argList.begin();
 	itparameter++;
 	if (itparameter == argList.end())
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, senderNick, "PRIVMSG"), 0);
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, senderNick, "PRIVMSG", client));
 	else
 	{
 		std::string target = *itparameter;
 		itparameter++;
 		if (itparameter == argList.end())
-			return(sendErroMsg(ERR_NOTEXTTOSEND, index, senderNick), 0);
+			return(sendErroMsg(ERR_NOTEXTTOSEND, index, senderNick, client));
 		std::string message = *itparameter;
 		if (message[0] != ':')
-			return(sendErroMsg(ERR_NOTEXTTOSEND, index, senderNick), 0);
+			return(sendErroMsg(ERR_NOTEXTTOSEND, index, senderNick, client));
 		message.erase(0, 1);
 			
 		bool isChannel = (target[0] == '#');
@@ -371,9 +387,9 @@ int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &clie
 				target.erase(0, 1);
 
 			if (this->_channels.find(target) == this->_channels.end())
-				sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, senderNick, target);
-			else if (!this->_channels[target].ClientExists(senderNick))
-				sendErroMsgCHANNEL(ERR_CANNOTSENDTOCHAN, index, senderNick, target);
+				return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, senderNick, target, client));
+			else if (!this->_channels[target].ClientExists(senderNickFd))
+				return (sendErroMsgCHANNEL(ERR_CANNOTSENDTOCHAN, index, senderNick, target, client));
 			else
 			{
 				// std::string privmsgLine = std::string(CYAN) + ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #"
@@ -381,11 +397,14 @@ int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &clie
 				std::string privmsgLine = ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG #"
 						+ target + " :" + message + "\r\n";
 				privmsgLine = enforceMessageLimit(privmsgLine);
-				const std::map<std::string, Client*>& channelClients = this->_channels[target].GetAllClients();
-				for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+				const std::map<int, Client*>& channelClients = this->_channels[target].GetAllClients();
+				for (std::map<int, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 				{
-					if (it->second && it->second->GetFd() != this->_Fds[index].fd)
-					send(it->second->GetFd(), privmsgLine.c_str(), privmsgLine.size(), 0);
+					if (it->second->GetErase() == true)
+						return (EXIT_FAILURE);
+					if (it->second->GetErase() == false && it->second->GetFd() != this->_Fds[index].fd)
+						if (send(it->second->GetFd(), privmsgLine.c_str(), privmsgLine.size(), MSG_NOSIGNAL) == -1)
+							return (client.SetErase(), EXIT_FAILURE);
 				}
 				std::cout << CYAN << "[#" << target << "] " << senderNick << ": " << message << RESET << std::endl;
 			}
@@ -403,7 +422,7 @@ int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &clie
 			}
 
 			if (!targetClient)
-				sendErroMsgKEY(ERR_NOSUCHNICK, index, senderNick, target);
+				return (sendErroMsgKEY(ERR_NOSUCHNICK, index, senderNick, target, client));
 			else
 			{
 				// std::string privmsgLine = std::string(BLUE) + ":" + senderNick + "!" + client.GetUsername() + "@localhost PRIVMSG "
@@ -411,17 +430,19 @@ int	Server::cmdPrivmsg(std::vector<std::string> argList, int index, Client &clie
 				std::string privmsgLine = ":" + senderNick + "!" + senderNick + "@localhost PRIVMSG " 
 						+ targetClient->GetNickname() + " :" + message + "\r\n";
 				privmsgLine = enforceMessageLimit(privmsgLine);
-				send(targetClient->GetFd(), privmsgLine.c_str(), privmsgLine.size(), 0);
+				if (send(targetClient->GetFd(), privmsgLine.c_str(), privmsgLine.size(), MSG_NOSIGNAL) == -1)
+					return (client.SetErase(), EXIT_FAILURE);
 				std::cout << BLUE << "[PM] " << senderNick << " -> " << target << ": " << message << RESET << std::endl;
 			}
 		}
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int	Server::cmdPart(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string nick = client.GetNickname();
+	int	nickFd = client.GetFd();
 	std::vector<std::string>::iterator itparameter = argList.begin();
 	itparameter++;
 	if (itparameter != argList.end())
@@ -430,9 +451,9 @@ int	Server::cmdPart(std::vector<std::string> argList, int index, Client &client)
 		if (!channelToQuit.empty() && channelToQuit[0] == '#')
 			channelToQuit.erase(0, 1);
 		if (this->_channels.find(channelToQuit) == this->_channels.end())
-			sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelToQuit);
-		else if (!this->_channels[channelToQuit].ClientExists(nick))
-			sendErroMsgCHANNEL(ERR_NOTONCHANNEL, index, nick, channelToQuit);
+			return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelToQuit, client));
+		else if (!this->_channels[channelToQuit].ClientExists(nickFd))
+			return (sendErroMsgCHANNEL(ERR_NOTONCHANNEL, index, nick, channelToQuit, client));
 		else
 		{
 			itparameter++;
@@ -440,13 +461,13 @@ int	Server::cmdPart(std::vector<std::string> argList, int index, Client &client)
 			if (itparameter != argList.end())
 				quitMessage = *itparameter;
 			std::string partLine = ":" + nick + "!" + nick + "@localhost PART #" + channelToQuit + " " + quitMessage + "\r\n";
-			const std::map<std::string, Client*>& channelClients = this->_channels[channelToQuit].GetAllClients();
-			for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+			const std::map<int, Client*>& channelClients = this->_channels[channelToQuit].GetAllClients();
+			for (std::map<int, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 			{
-				if (it->second)
-				send(it->second->GetFd(), partLine.c_str(), partLine.size(), 0);
+				if (send(it->second->GetFd(), partLine.c_str(), partLine.size(), MSG_NOSIGNAL) == -1)
+					return (client.SetErase(), EXIT_FAILURE);
 			}
-			this->_channels[channelToQuit].RemoveClient(nick);
+			this->_channels[channelToQuit].RemoveClient(nickFd);
 			if (this->_channels[channelToQuit].GetClientCount() == 0)
 			{
 				this->_channels.erase(channelToQuit);
@@ -457,8 +478,8 @@ int	Server::cmdPart(std::vector<std::string> argList, int index, Client &client)
 		}
 	}
 	else
-		sendErroMsg(ERR_NEEDMOREPARAMS, index, nick);
-	return (0);
+		return (sendErroMsg(ERR_NEEDMOREPARAMS, index, nick, client));
+	return (EXIT_SUCCESS);
 }
 
 int Server::cmdQuit(std::vector<std::string> argList, int index, Client &client)
@@ -472,113 +493,130 @@ int Server::cmdQuit(std::vector<std::string> argList, int index, Client &client)
 	else
 		message = *itparameter;
 	if (message.empty() || message[0] != ':')
-		return(sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "QUIT"), 0);
+		return(sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "QUIT", client));
 	message.erase(0, 1);
 	std::string quitLine = ":" + nick + "!" + client.GetUsername() + "@localhost QUIT :" + message + "\r\n";
 	for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
 	{
 		if (!it->second.GetNickname().empty())
-			send(it->second.GetFd(), quitLine.c_str(), quitLine.size(), 0);
+		{
+			if (send(it->second.GetFd(), quitLine.c_str(), quitLine.size(), MSG_NOSIGNAL) == -1)
+				return (client.SetErase(), EXIT_FAILURE);
+		}
 	}
-	close(this->_Fds[index].fd);
 	client.SetErase();
 	return (1);
+}
+
+int	Server::GetNickFd(std::string nick)
+{
+	std::map<int, Client>::iterator itClient = this->_Client.begin();
+	if (itClient == this->_Client.end())
+		return (-1);
+	while (itClient != this->_Client.end())
+	{
+		if (itClient->second.GetNickname() == nick)
+			return (itClient->first);
+		itClient++;
+	}
+	return (-1);
 }
 
 int	Server::cmdKick(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string nick = client.GetNickname();
+	int	nickFd = client.GetFd();
 	std::vector<std::string>::iterator itparameter = argList.begin();
 	
 	itparameter++;
 	if (itparameter == argList.end())
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "KICK"), 0);
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "KICK", client));
 	std::string channelName = *itparameter;
 	
 	itparameter++;
 	if (itparameter == argList.end())
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "KICK"), 0);
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "KICK", client));
 	std::string targetNick = *itparameter;
-		
+	int	targetNickFd = GetNickFd(targetNick);
+
 	if (!channelName.empty() && channelName[0] == '#')
 		channelName.erase(0, 1);
 	if (this->_channels.find(channelName) == this->_channels.end())
-		return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName), 0);
-	else if (this->_channels[channelName].GetModerator() != nick)
-		return (sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, channelName), 0);
-	else if (!this->_channels[channelName].ClientExists(targetNick))
-		return (sendErroMsgCHANNEL_KEY(ERR_USERNOTINCHANNEL, index, nick, channelName, targetNick), 0);
+		return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, channelName, client));
+	else if (this->_channels[channelName].GetModerator() != nickFd)
+		return (sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, channelName, client));
+	else if (targetNickFd == -1 || !this->_channels[channelName].ClientExists(targetNickFd))
+		return (sendErroMsgCHANNEL_KEY(ERR_USERNOTINCHANNEL, index, nick, channelName, targetNick, client));
 	else
 	{
-		Client* targetClient = this->_channels[channelName].GetClient(targetNick);
-		if (targetClient)
+		Client* targetClient = this->_channels[channelName].GetClient(targetNickFd);
+		if (targetClient->GetFd() != -1)
 		{
-			std::string kickLine = ":" + nick + "!" + client.GetUsername() + "@localhost KICK #"
+			std::string kickLine = " :" + nick + "!" + client.GetUsername() + "@localhost KICK #"
 					+ channelName + " " + targetNick + " : \r\n";
-			const std::map<std::string, Client*>& channelClients = this->_channels[channelName].GetAllClients();
-			for (std::map<std::string, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+			const std::map<int, Client*>& channelClients = this->_channels[channelName].GetAllClients();
+			for (std::map<int, Client*>::const_iterator it = channelClients.begin(); it != channelClients.end(); ++it)
 			{
-				if (it->second)
-					send(it->second->GetFd(), kickLine.c_str(), kickLine.size(), 0);
+				if (send(it->second->GetFd(), kickLine.c_str(), kickLine.size(), MSG_NOSIGNAL) == -1)
+					return (client.SetErase(), EXIT_FAILURE);
 			}
 			targetClient->SetChannelName("");
-			this->_channels[channelName].RemoveClient(targetNick);
+			this->_channels[channelName].RemoveClient(targetNickFd);
 			std::cerr << MAGENTA << nick << " kicked " << targetNick << " from #" << channelName << RESET << std::endl;
 		}
 	}
-	
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int	Server::cmdInvite(std::vector<std::string> argList, int index, Client &client)
 {
 	std::string nick = client.GetNickname();
+	int	nickFd = client.GetFd();
 	std::vector<std::string>::iterator itparameter = argList.begin();
 	itparameter++;
 	if (itparameter == argList.end())
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "INVITE"), 0);
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "INVITE", client));
 	std::string targetNick = *itparameter;
+	int	targetNickFd = GetNickFd(targetNick);
 
 	itparameter++;
 	if (itparameter == argList.end())
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "INVITE"), 0);
+		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "INVITE", client));
 	std::string targetChannel = *itparameter;
 
 	if (!targetChannel.empty() && targetChannel[0] == '#')
 		targetChannel.erase(0, 1);
 	if (this->_channels.find(targetChannel) == this->_channels.end())
-		sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, targetChannel);
-	else if (this->_channels[targetChannel].GetModerator() != nick)
-		sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, targetChannel);
+		return (sendErroMsgCHANNEL(ERR_NOSUCHCHANNEL, index, nick, targetChannel, client));
+	else if (this->_channels[targetChannel].GetModerator() != nickFd)
+		return (sendErroMsgCHANNEL(ERR_CHANOPRIVSNEEDED, index, nick, targetChannel, client));
 	else
 	{
-		Client* targetClient = NULL;
-		for (std::map<int, Client>::iterator it = this->_Client.begin(); it != this->_Client.end(); ++it)
-		{
-			if (it->second.GetNickname() == targetNick)
-			{
-				targetClient = &it->second;
-				break;
-			}
-		}
-		if (!targetClient)
-			sendErroMsgKEY(ERR_NOSUCHNICK, index, nick, targetNick);
-		else if (this->_channels[targetChannel].ClientExists(targetNick))
-			sendErroMsgCHANNEL_KEY(ERR_USERONCHANNEL, index, nick, targetChannel, targetNick);
+		if (targetNickFd == -1)
+			return (sendErroMsgKEY(ERR_NOSUCHNICK, index, nick, targetNick, client));
+		else if (this->_channels[targetChannel].ClientExists(targetNickFd))
+			return (sendErroMsgCHANNEL_KEY(ERR_USERONCHANNEL, index, nick, targetChannel, targetNick, client));
 		else
 		{
 			std::string inviteLine = ":" + nick + "!" + client.GetUsername() + "@localhost INVITE "
 					+ targetNick + " #" + targetChannel + "\r\n";
-			send(targetClient->GetFd(), inviteLine.c_str(), inviteLine.size(), 0);
-			
+			if (send(targetNickFd, inviteLine.c_str(), inviteLine.size(), MSG_NOSIGNAL) == -1)
+				return (client.SetErase(), EXIT_FAILURE);
+
 			std::string inviteConfirm = ":" + std::string(SERVER_NAME) + " 341 "
 					+ targetNick + " #" + targetChannel + "\r\n";
-			send(client.GetFd(), inviteConfirm.c_str(), inviteConfirm.size(), 0);
+			if (send(client.GetFd(), inviteConfirm.c_str(), inviteConfirm.size(), MSG_NOSIGNAL) == -1)
+				return (client.SetErase(), EXIT_FAILURE);
 			
-			this->_channels[targetChannel].AddClient(targetNick, targetClient);
+			std::map<int, Client>::iterator itTargetClient = this->_Client.find(targetNickFd);
+			if (itTargetClient == this->_Client.end())
+				return (sendErroMsgKEY(ERR_NOSUCHNICK, index, nick, targetNick, client));			
+			
+			Client *targetClient = &itTargetClient->second;
+			this->_channels[targetChannel].AddClient(targetNickFd, targetClient);
 			targetClient->SetChannelName(targetChannel);
 			std::cerr << PINK << nick << " invited " << targetNick << " to #" << targetChannel << RESET << std::endl;
 		}
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }

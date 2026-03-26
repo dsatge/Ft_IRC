@@ -26,7 +26,8 @@ int Server::cmdAuthentificationHandler(std::vector<std::string> argList, int ind
 		std::cerr << GREEN << client.GetNickname() << " Joined Server" << RESET << std::endl;
 		
 		/// Client log :
-		sendWelcomeMsg(index, client.GetNickname());
+		if (sendWelcomeMsg(index, client.GetNickname(), client) == EXIT_FAILURE)
+			return (EXIT_FAILURE);
 	}
 	return (EXIT_SUCCESS);
 }
@@ -41,14 +42,20 @@ int	Server::authentificateClientPASS(std::vector<std::string> argList, int index
 	if (nick.empty())
 		nick = "*";
 	if (client.GetAuthenticated() == true)
-		return (sendErroMsg(ERR_ALREADYREGISTRED, index, nick), EXIT_FAILURE);
+	{
+		sendErroMsg(ERR_ALREADYREGISTRED, index, nick, client);
+		return (EXIT_FAILURE);
+	}
 	itArg++;
 	if (itArg != argList.end())
 	{
 		if (*itArg == this->_password)
 			client.SetAuthenticated(true);
 		else
-			sendErroMsgKEY(ERR_PASSWDMISMATCH, index, "", "PASS");
+		{
+			if (sendErroMsgKEY(ERR_PASSWDMISMATCH, index, "", "PASS", client) == EXIT_FAILURE)
+				return (EXIT_FAILURE);
+		}
 		return (EXIT_SUCCESS);
 	}
 	return (EXIT_FAILURE);
@@ -69,7 +76,7 @@ bool	isValideNick(std::string nick)
 		return (false);
 	char c = nick[0];
 	if (isalpha(c) == false || (c == '[' || c == ']' || c == '\'' || c == '`' || c == '_' || c == '{' || c == '}' || c == '|'))
-		return (std::cerr << "j ai failli ici" << std::endl, false);
+		return (false);
 	for (size_t i = 0; i < nick.size(); i++)
 	{
 		if (isForbiddenChar(nick[i]) == true)
@@ -95,11 +102,14 @@ int Server::authentificateClientNICK(std::vector<std::string> argList, int index
 			}
 		}
 		if (nickExists)
-			return (sendErroMsg(ERR_NICKNAMEINUSE, index, newNick), EXIT_FAILURE);
+		{
+			sendErroMsg(ERR_NICKNAMEINUSE, index, newNick, client);
+			return (EXIT_FAILURE);
+		}
 		if (isValideNick(newNick) == false)
 		{
-			std::cerr << GREEN << "wtf : " << newNick << RESET << std::endl;
-			return (sendErroMsg(ERR_ERRONEUSNICKNAME, index, newNick), EXIT_FAILURE);
+			sendErroMsg(ERR_ERRONEUSNICKNAME, index, newNick, client);
+			return (EXIT_FAILURE);
 		}
 		else
 		{
@@ -109,14 +119,15 @@ int Server::authentificateClientNICK(std::vector<std::string> argList, int index
 				// 		+ "@localhost NICK :" + newNick + std::string(RESET) + "\r\n";
 				std::string updateMsg = ":" + client.GetNickname() + "!"
 						+ "@localhost NICK :" + newNick + "\r\n";
-				send(this->_Fds[index].fd, updateMsg.c_str(), updateMsg.size(), 0);
-				std::cerr << YELLOW << client.GetNickname() << " changed nick to " << newNick << RESET << std::endl;
+				if (send(this->_Fds[index].fd, updateMsg.c_str(), updateMsg.size(), MSG_NOSIGNAL) == -1)
+					return (client.SetErase(), EXIT_FAILURE);
+						std::cerr << YELLOW << client.GetNickname() << " changed nick to " << newNick << RESET << std::endl;
 			}
 			client.SetNickname(newNick);
 		}
 	}
 	else
-			sendErroMsg(ERR_NONICKNAMEGIVEN, index, client.GetNickname());
+		return (sendErroMsg(ERR_NONICKNAMEGIVEN, index, client.GetNickname(), client));
 	return (EXIT_SUCCESS);
 }
 
@@ -142,7 +153,10 @@ int Server::authentificateClientUSER(std::vector<std::string> argList, int index
 	if (nick.empty())
 		nick = "*";
 	if (!client.GetUsername().empty())
-		return (sendErroMsg(ERR_ALREADYREGISTRED, index, nick), EXIT_FAILURE);
+	{
+		sendErroMsg(ERR_ALREADYREGISTRED, index, nick, client);
+		return (EXIT_FAILURE);
+	}
 	std::string userName, mode, unUsed, realName;
 	int paramNumber = 0;
 	for (std::vector<std::string>::iterator itArg = argList.begin(); itArg != argList.end(); itArg++)
@@ -157,7 +171,10 @@ int Server::authentificateClientUSER(std::vector<std::string> argList, int index
 		paramNumber++;
 	}
 	if (paramNumber < 5)
-		return (sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "USER"), EXIT_FAILURE);
+	{
+		sendErroMsgKEY(ERR_NEEDMOREPARAMS, index, nick, "USER", client);
+		return (EXIT_FAILURE);
+	}
 	client.SetUsername(userName);
 	client.SetRealname(realName);
 	return (EXIT_SUCCESS);

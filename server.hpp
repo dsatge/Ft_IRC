@@ -42,7 +42,7 @@ class Server
 {
 	public :
 		typedef int (Server::*cmdPtr)(std::vector<std::string>, int, Client&);
-		typedef int (Server::*cmdPtrMode)(int, bool, std::string, std::string, std::string);
+		typedef int (Server::*cmdPtrMode)(int, bool, std::string, std::string, std::string, Client&);
 
 	private :
 		int								_serverFd;
@@ -57,15 +57,15 @@ class Server
 		std::map<std::string, cmdPtr>	_cmds;
 		/// Errors Messages
 		void	initErrorMsg();
-		void	sendErroMsg(int errorCode, int index, std::string target);
-		void	sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword);
-		void	sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel);
-		void	sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key);
-		void	sendInfoMsg(int infoCode, int index, std::string target);	
-		void	sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std::string channel);
+		int	sendErroMsg(int errorCode, int index, std::string target, Client &client);
+		int	sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword, Client &client);
+		int	sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel, Client &client);
+		int	sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key, Client &client);
+		int	sendInfoMsg(int infoCode, int index, std::string target, Client &client);	
+		int	sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std::string channel, Client &client);
 
 		/// Server Messages
-		void	sendWelcomeMsg(int index, std::string target);
+		int	sendWelcomeMsg(int index, std::string target, Client &client);
 		/// Features Authentification
 		void	initCmdsAuthentification();
 		int 	cmdAuthentificationHandler(std::vector<std::string> argList, int index, Client &client);
@@ -90,12 +90,12 @@ class Server
 		/// Features modes cmds
 		void	initMode();
 		bool modeNeedsParam(char mode);
-		int modeHandler(char mode, int index, bool adding, std::string user, std::string channelName, std::string param);
-		int	modeI(int index, bool adding, std::string user, std::string channelName, std::string empty);
-		int	modeT(int index, bool adding, std::string user, std::string channelName, std::string empty);
-		int	modeK(int index, bool adding, std::string user, std::string channelName, std::string password);
-		int	modeO(int index, bool adding, std::string user, std::string channelName, std::string target);
-		int	modeL(int index, bool adding, std::string user, std::string channelName, std::string limit);
+		int modeHandler(char mode, int index, bool adding, std::string user, std::string channelName, std::string param, Client &client);
+		int	modeI(int index, bool adding, std::string user, std::string channelName, std::string empty, Client &client);
+		int	modeT(int index, bool adding, std::string user, std::string channelName, std::string empty, Client &client);
+		int	modeK(int index, bool adding, std::string user, std::string channelName, std::string password, Client &client);
+		int	modeO(int index, bool adding, std::string user, std::string channelName, std::string target, Client &client);
+		int	modeL(int index, bool adding, std::string user, std::string channelName, std::string limit, Client &client);
 	public :
 		Server();
 		Server(std::string port, std::string password);
@@ -110,6 +110,7 @@ class Server
 		
 		int	GetServerFd() const;
 		int	GetPort() const;
+		int	GetNickFd(std::string nick);
 		std::string	GetPassword() const;
 		std::vector<struct pollfd> GetFdsContainer() const;
 		struct pollfd GetFds(int index) const;
@@ -122,6 +123,7 @@ class Server
 		std::string intToString(int num);
 		int		pollLoop();
 		int		acceptFd(int index);
+		void	quitChannels(int clientFd);
 		void	disconnectClient(int nbrClient);
 		int		clientJoiningServer(int index);
 		int		clientquittingServer(int index, char* buffer);

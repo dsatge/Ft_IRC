@@ -1,4 +1,5 @@
 # include "server.hpp"
+# include "client.hpp"
 
 void	Server::initErrorMsg()
 {
@@ -31,7 +32,7 @@ void	Server::initErrorMsg()
 	_ErrorMsg[RPL_NOTOPIC] = "No topic is set";
 }
 
-void	Server::sendInfoMsg(int infoCode, int index, std::string target)
+int	Server::sendInfoMsg(int infoCode, int index, std::string target, Client &client)
 {
 	if (target.empty())
 		target = "*";
@@ -42,11 +43,13 @@ void	Server::sendInfoMsg(int infoCode, int index, std::string target)
 		// 		+ " " + target + " :" + itMsg->second + RESET + "\r\n";
 		std::string infoMsg = ":" + std::string(SERVER_NAME) + " " + intToString(infoCode)
 				+ " " + target + " :" + itMsg->second + RESET + "\r\n";
-		send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), 0);
+		if (send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
 }
 
-void	Server::sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std::string channel)
+int	Server::sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std::string channel, Client &client)
 {
 	if (target.empty())
 		target = "*";
@@ -57,12 +60,14 @@ void	Server::sendInfoMsgCHANNEL(int infoCode, int index, std::string target, std
 		// 		+ " " + target + " #" + channel + " :" + itMsg->second + RESET + "\r\n";
 		std::string infoMsg = ":" + std::string(SERVER_NAME) + " " + intToString(infoCode)
 				+ " " + target + " #" + channel + " :" + itMsg->second + RESET + "\r\n";
-		send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), 0);
+		if (send(this->_Fds[index].fd, infoMsg.c_str(), infoMsg.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
 }
 
 
-void	Server::sendErroMsg(int errorCode, int index, std::string target)
+int	Server::sendErroMsg(int errorCode, int index, std::string target, Client &client)
 {
 	if (target.empty())
 		target = "*";
@@ -73,11 +78,13 @@ void	Server::sendErroMsg(int errorCode, int index, std::string target)
 		// 		+ " " + target + " :" + itError->second + RESET + "\r\n";
 		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
 				+ " " + target + " :" + itError->second + RESET + "\r\n";
-		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+		if (send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
 }
 
-void	Server::sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel)
+int	Server::sendErroMsgCHANNEL(int errorCode, int index, std::string target, std::string channel, Client &client)
 {
 	if (target.empty())
 		target = "*";
@@ -86,11 +93,13 @@ void	Server::sendErroMsgCHANNEL(int errorCode, int index, std::string target, st
 	{
 		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
 				+ " " + target + " #" + channel + " :" + itError->second + "\r\n";
-		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+		if (send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
 }
 
-void	Server::sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key)
+int	Server::sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target, std::string channel, std::string key, Client &client)
 {
 	if (target.empty())
 		target = "*";
@@ -99,12 +108,14 @@ void	Server::sendErroMsgCHANNEL_KEY(int errorCode, int index, std::string target
 	{
 		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
 				+ " " + target + " " + key + " #" + channel + " :" + itError->second + "\r\n";
-		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+		if (send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
 }
 
 
-void	Server::sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword)
+int	Server::sendErroMsgKEY(int errorCode, int index, std::string target, std::string keyword, Client &client)
 {
 	if (target.empty())
 		target = "*";
@@ -113,8 +124,10 @@ void	Server::sendErroMsgKEY(int errorCode, int index, std::string target, std::s
 	{
 		std::string errorMsg = ":" + std::string(SERVER_NAME) + " " + intToString(errorCode)
 				+ " " + target + " " + keyword + " :" + itError->second + "\r\n";
-		send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), 0);
+		if (send(this->_Fds[index].fd, errorMsg.c_str(), errorMsg.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
 }
 
 std::string	Server::dateSetUp()
@@ -126,19 +139,17 @@ std::string	Server::dateSetUp()
 	return (buffer);
 }
 
-void	Server::sendWelcomeMsg(int index, std::string target)
+int	Server::sendWelcomeMsg(int index, std::string target, Client &client)
 {
-	std::string welcome = ":" + std::string(SERVER_NAME) + " 001 " + target + " :Welcome to the IRC network " + target + "\r\n";
-	send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), 0);
+	std::string welcome;
+	welcome += ":" + std::string(SERVER_NAME) + " 001 " + target + " :Welcome to the IRC network " + target + "\r\n";
+	welcome += ":" + std::string(SERVER_NAME) + " 002 " + target + " :Your host is " + std::string(SERVER_NAME) + ", running version " + VERSION + "\r\n";
+	welcome += ":" + std::string(SERVER_NAME) + " 003 " + target + " :This server was created " + _date + "\r\n";
+	welcome += ":" + std::string(SERVER_NAME) + " 004 " + target + " " + std::string(SERVER_NAME) + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES + "\r\n";
 	
-	std::string yourhost =  ":" + std::string(SERVER_NAME) + " 002 " + target + " :Your host is " + std::string(SERVER_NAME) + ", running version " + VERSION + "\r\n";
-	send(this->_Fds[index].fd, yourhost.c_str(), yourhost.size(), 0);
-	
-	std::string created =  ":" + std::string(SERVER_NAME) + " 003 " + target + " :This server was created " + _date + "\r\n";
-	send(this->_Fds[index].fd, created.c_str(), created.size(), 0);
-	
-	std::string myinfo =  ":" + std::string(SERVER_NAME) + " 004 " + target + " " + std::string(SERVER_NAME) + " " + VERSION + " " + USER_MODES + " " + CHANNEL_MODES + "\r\n";
-	send(this->_Fds[index].fd, myinfo.c_str(), myinfo.size(), 0);
+	if (send(this->_Fds[index].fd, welcome.c_str(), welcome.size(), MSG_NOSIGNAL) == -1)
+			return (client.SetErase(), EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 	
 	// std::string ok = "Use HELP to see available commands.\n";
 	// send(this->_Fds[index].fd, ok.c_str(), ok.size(), 0);

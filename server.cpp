@@ -108,20 +108,21 @@ int	Server::setSocket(Server *server)
 	if (serverFd.fd == -1)
 	{
 		std::cerr << RED << "Error: fail socket creation" << RESET << std::endl;
-		return (EXIT_FAILURE);
+		return (close(serverFd.fd), EXIT_FAILURE);
 	}
 	server->SetServerFd(serverFd.fd);
 	server->AddSocketFds(serverFd);
 	int opt_onOff = 1;
 	setsockopt(this->_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt_onOff, sizeof(opt_onOff));
 	if (this->nonBlocking(serverFd.fd) == EXIT_FAILURE)
-		return (EXIT_FAILURE);
+		return (closeFds(), EXIT_FAILURE);
 	return (EXIT_SUCCESS);
 }
 
 int	Server::nonBlocking(int fd)
 {
-	int flag = fcntl(fd, F_GETFL, 0);
+	int flag = fcntl(fd, F_SETFL, O_NONBLOCK);
+	// int flag = fcntl(fd, F_GETFL, 0);
 	if (flag == -1)
 	{
 		std::cerr << RED << "Error: fcntl F_GETFL" << RESET << std::endl;
@@ -145,7 +146,7 @@ int	Server::bindFt()
 	if (bind(this->_serverFd, reinterpret_cast<const sockaddr *>(&addrIn), sizeof(addrIn)) != 0)
 	{
 		perror("bind");
-		return (EXIT_FAILURE);
+		return (closeFds(),EXIT_FAILURE);
 	}
 	return (EXIT_SUCCESS);
 }
@@ -200,9 +201,12 @@ int	Server::pollLoop()
 							if (quitFlag == 1)
 								flagDisconnect += 1;
 						}
-						if (msg < 0)
+						if (msg == -1)
 						{
-							flagDisconnect += clientquittingServer(index, buffer);
+							if (errno == EAGAIN || errno == EWOULDBLOCK)
+								continue ;
+							else
+								flagDisconnect += clientquittingServer(index, buffer);
 						}
 					}
 				}
@@ -250,7 +254,7 @@ int	Server::clientquittingServer(int index, char* buffer)
 		std::string channelName = it->second.GetChannelName();
 		if (!channelName.empty() && this->_channels.find(channelName) != this->_channels.end())
 		{
-			this->_channels[channelName].RemoveClient(it->second.GetNickname());
+			this->_channels[channelName].RemoveClient(it->second.GetFd());
 			if (this->_channels[channelName].GetClientCount() == 0)
 			{
 				this->_channels.erase(channelName);
@@ -298,7 +302,7 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 		if (client.GetAuthenticated() == false)
 		{
 			if (authentificateClientPASS(args, index, client) == EXIT_FAILURE)
-				sendErroMsg(451, index, "");
+				quitFlag += sendErroMsg(ERR_NOTREGISTERED, index, "", client);
 		}
 		else
 		{
@@ -306,12 +310,12 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 			{
 				initCmdsAuthentification();
 				if (cmdAuthentificationHandler(args, index, client) == EXIT_FAILURE)
-					sendErroMsg(451, index, client.GetNickname());
+					quitFlag += sendErroMsg(ERR_NOTREGISTERED, index, client.GetNickname(), client);
 			}
 			else
 			{
 				initCmds();
-				quitFlag = cmdHandler(args, index, client);
+				quitFlag += cmdHandler(args, index, client);
 			}
 		}
 		pos = ClientMsg.find("\r\n");
@@ -322,28 +326,39 @@ int	Server::clientSendingMessage(int index, char* buffer, size_t bytesSize)
 	return (quitFlag);
 }
 
+void	Server::quitChannels(int clientFd)
+{
+	for (std::map<std::string, Channel>::iterator itChannel = this->_channels.begin(); itChannel != this->_channels.end(); ++itChannel)
+	{
+		if (itChannel->second.GetClient(clientFd) != NULL)
+			this->_channels[itChannel->first].RemoveClient(clientFd);
+	}
+	return ;
+}
+
 void Server::disconnectClient(int nbrClient)
 {
-	if (nbrClient == 0)
-		return ;
-	for (size_t i = 0; i < this->_Fds.size(); i++)
+	(void) nbrClient;
+	std::map<int, Client>::iterator it = this->_Client.begin();
+	while (it != this->_Client.end())
 	{
-		if (nbrClient == 0)
-			return ;
-		std::map<int, Client>::iterator it = this->_Client.find(this->_Fds[i].fd);
-		if (it != this->_Client.end())
+		if (it->second.GetErase() == true)
 		{
-			if (it->second.GetErase() == true)
+			int fdToClose = it->first;
+			quitChannels(fdToClose);
+			std::vector<struct pollfd>::iterator itFds = this->_Fds.begin();
+			while (itFds != this->_Fds.end())
 			{
-				// std::cerr << RED << it->second.GetNickname() << " Quit Server" << RESET << std::endl;
-				this->_Client.erase(it->first);
-				pollfd lastlistfd = this->_Fds.back();
-				this->_Fds.at(i) = lastlistfd;
-				this->_Fds.pop_back();
-				i--;
-				nbrClient--;
+				if (itFds->fd == fdToClose)
+					itFds = this->_Fds.erase(itFds);
+				else
+					itFds++;
 			}
+			close(fdToClose);
+			this->_Client.erase(it++);
 		}
+		else
+			it++;
 	}
 	return ;
 }
